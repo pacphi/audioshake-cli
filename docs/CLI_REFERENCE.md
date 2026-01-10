@@ -18,22 +18,6 @@ cargo install audioshake-cli
 
 Download the latest release for your platform from GitHub Releases.
 
-### Prerequisites
-
-For local file processing, install cloudflared:
-
-```bash
-# macOS
-brew install cloudflared
-
-# Linux
-curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
-chmod +x cloudflared && sudo mv cloudflared /usr/local/bin/
-
-# Windows
-winget install Cloudflare.cloudflared
-```
-
 ---
 
 ## Configuration
@@ -649,19 +633,6 @@ Ensure your API key is set via one of these methods:
 2. `AUDIOSHAKE_API_KEY` environment variable
 3. `.env` file with `AUDIOSHAKE_API_KEY=...`
 4. Config file at `~/.config/audioshake/config.toml`
-
-### "cloudflared not found"
-
-Install cloudflared for local file processing:
-
-```bash
-# macOS
-brew install cloudflared
-
-# Linux
-sudo apt install cloudflared
-# or download from https://github.com/cloudflare/cloudflared/releases
-```
 
 ### "Connection timeout"
 

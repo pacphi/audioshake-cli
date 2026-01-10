@@ -151,3 +151,19 @@ pub struct TaskStatistics {
     /// Total duration in minutes
     pub total_duration_minutes: f64,
 }
+
+/// Response from file upload (legacy API)
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UploadResponse {
+    /// Uploaded file name
+    pub name: String,
+    /// Asset ID for job requests
+    pub id: String,
+    /// MIME type
+    pub file_type: String,
+    /// File extension
+    pub format: String,
+    /// Download URL for the uploaded file
+    pub link: Url,
+}

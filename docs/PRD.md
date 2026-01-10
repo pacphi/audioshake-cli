@@ -88,7 +88,7 @@ Current solutions require web interfaces or complex API integrations. There is n
 ```text
 1. User has local MP3 file: song.mp3
 2. User runs: `audioshake process song.mp3 -m vocals --wait`
-3. CLI starts local server, creates tunnel, submits task
+3. CLI uploads file to AudioShake servers and submits task
 4. CLI displays progress spinner while processing
 5. CLI downloads vocals.wav to ./output/ directory
 6. User has isolated vocal track ready for use
@@ -210,19 +210,18 @@ done
 
 ### UC-01: Process Local Audio File
 
-**Preconditions**: Valid API key configured, cloudflared installed
+**Preconditions**: Valid API key configured
 **Input**: Local audio file path, model selection, output format
 **Output**: Processed audio/text files in output directory
 
 **Flow**:
 
 1. CLI validates input file exists and format is supported
-2. CLI starts local HTTP server on random port
-3. CLI launches cloudflared tunnel to expose server
-4. CLI submits task to AudioShake API with tunnel URL
+2. CLI uploads file to AudioShake servers (multipart upload)
+3. CLI receives hosted URL for uploaded file
+4. CLI submits task to AudioShake API with hosted URL
 5. CLI polls for completion or uses webhook
 6. CLI downloads results to output directory
-7. CLI terminates tunnel and server
 
 ### UC-02: Process Remote URL
 
@@ -289,13 +288,12 @@ done
 - Validate file format before processing
 - Report clear error for unsupported formats
 
-### FR-03: Local File Serving
+### FR-03: Local File Upload
 
-- Start temporary Axum HTTP server on random available port
-- Launch cloudflared tunnel to create public URL
-- Serve only the specific file being processed
-- Automatically cleanup tunnel and server after completion
-- Timeout tunnel after configurable duration (default: 1 hour)
+- Upload local files directly to AudioShake servers via multipart form
+- Support large files with appropriate timeout (10 minutes)
+- Display upload progress indicator
+- Receive hosted URL for use with Tasks API
 
 ### FR-04: Task Submission
 
@@ -362,8 +360,7 @@ done
 
 - API keys stored securely (not in command history)
 - HTTPS only for all API communication
-- Tunnel URLs are temporary and randomized
-- Local server binds to localhost only
+- Files uploaded directly to AudioShake (no third-party intermediaries)
 
 ### NFR-04: Portability
 
@@ -405,7 +402,6 @@ done
 ### Required
 
 - Rust 1.92+ (for async traits, 2024 edition features)
-- cloudflared binary (for local file tunnel)
 - Internet connection (for API access)
 
 ### Optional
@@ -420,7 +416,7 @@ done
 | ----- | ------------------------------------- | -------- |
 | 1     | Core infrastructure (CLI, API client) | -        |
 | 2     | Main commands (process, task)         | -        |
-| 3     | Advanced features (tunnel, progress)  | -        |
+| 3     | Advanced features (upload, progress)  | -        |
 | 4     | Polish (tests, docs, release)         | -        |
 
 ---

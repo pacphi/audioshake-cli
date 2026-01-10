@@ -18,9 +18,6 @@ pub enum AppError {
     #[error("Download error: {0}")]
     Download(#[from] DownloadError),
 
-    #[error("Tunnel error: {0}")]
-    Tunnel(#[from] TunnelError),
-
     #[error("URL parse error: {0}")]
     UrlParse(#[from] url::ParseError),
 
@@ -58,7 +55,10 @@ pub enum ConfigError {
 #[derive(Error, Debug)]
 pub enum ApiError {
     #[error("HTTP request failed: {0}")]
-    Request(#[from] reqwest::Error),
+    Http(#[from] reqwest::Error),
+
+    #[error("{0}")]
+    Request(String),
 
     #[error("API returned error {status}: {message}")]
     Response { status: u16, message: String },
@@ -106,25 +106,6 @@ pub enum DownloadError {
 
     #[error("HTTP error: {0}")]
     Http(#[from] reqwest::Error),
-
-    #[error("I/O error: {0}")]
-    Io(#[from] std::io::Error),
-}
-
-/// Tunnel-related errors
-#[derive(Error, Debug)]
-pub enum TunnelError {
-    #[error("cloudflared not found. Install with: brew install cloudflared")]
-    CloudflaredNotFound,
-
-    #[error("Failed to start tunnel: {0}")]
-    StartFailed(String),
-
-    #[error("Tunnel terminated unexpectedly")]
-    Terminated,
-
-    #[error("Failed to parse tunnel URL")]
-    UrlParseFailed,
 
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),

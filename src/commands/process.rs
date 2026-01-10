@@ -13,13 +13,13 @@ use crate::cli::args::ProcessArgs;
 use crate::config::types::AppConfig;
 use crate::download::manager::DownloadManager;
 use crate::error::Result;
-use crate::tunnel::TunnelService;
 
 /// Execute the process command
 ///
 /// # Errors
 ///
 /// Returns an error if processing fails.
+#[allow(clippy::missing_panics_doc)] // Template string is compile-time constant
 pub async fn execute(args: ProcessArgs, config: &AppConfig) -> Result<()> {
     let client = ApiClient::new(config.base_url.clone(), config.api_key.clone())?;
 
@@ -27,7 +27,7 @@ pub async fn execute(args: ProcessArgs, config: &AppConfig) -> Result<()> {
     let media_url = if args.input.starts_with("http://") || args.input.starts_with("https://") {
         Url::parse(&args.input)?
     } else {
-        // Local file - start tunnel
+        // Local file - upload to AudioShake servers
         let path = Path::new(&args.input);
         if !path.exists() {
             return Err(crate::error::AppError::User(format!(
@@ -36,24 +36,38 @@ pub async fn execute(args: ProcessArgs, config: &AppConfig) -> Result<()> {
             )));
         }
 
-        println!("{}", console::style("Starting local file server...").dim());
+        // Get file size for progress display
+        let metadata = std::fs::metadata(path)?;
+        let size_str = humansize::format_size(metadata.len(), humansize::BINARY);
 
-        let mut tunnel = TunnelService::new(path.to_path_buf());
-        let url = tunnel.start().await?;
+        println!(
+            "{} {} ({})",
+            console::style("Uploading").dim(),
+            console::style(path.file_name().unwrap_or_default().to_string_lossy()).cyan(),
+            size_str
+        );
+
+        let spinner = ProgressBar::new_spinner();
+        spinner.set_style(
+            ProgressStyle::default_spinner()
+                .template("{spinner:.cyan} {msg}")
+                .unwrap()
+                .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"),
+        );
+        spinner.enable_steady_tick(Duration::from_millis(100));
+        spinner.set_message("Uploading to AudioShake...");
+
+        let upload_result = client.upload_file(path).await?;
+
+        spinner.finish_and_clear();
 
         println!(
             "{} {}",
-            console::style("Tunnel URL:").dim(),
-            console::style(&url).cyan()
+            console::style("✓").green().bold(),
+            console::style("Upload complete").green()
         );
 
-        // Process with tunnel URL
-        let result = process_with_url(&client, &args, config, url.clone()).await;
-
-        // Stop tunnel
-        tunnel.stop().await;
-
-        return result;
+        upload_result.link
     };
 
     process_with_url(&client, &args, config, media_url).await

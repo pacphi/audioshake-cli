@@ -9,4 +9,3 @@ pub mod config;
 pub mod download;
 pub mod error;
 pub mod output;
-pub mod tunnel;

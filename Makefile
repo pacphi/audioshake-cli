@@ -331,17 +331,6 @@ publish:
 # Utility targets
 # =============================================================================
 
-# Check cloudflared is installed (required for local file processing)
-check-cloudflared:
-	@command -v cloudflared >/dev/null 2>&1 || { \
-		echo "cloudflared is not installed."; \
-		echo "Install with:"; \
-		echo "  macOS:  brew install cloudflared"; \
-		echo "  Linux:  See https://github.com/cloudflare/cloudflared/releases"; \
-		exit 1; \
-	}
-	@echo "cloudflared is installed: $$(cloudflared --version)"
-
 # Verify .env file exists
 check-env:
 	@test -f .env || { \
@@ -352,6 +341,6 @@ check-env:
 	@echo ".env file found"
 
 # Full setup check
-check: check-env check-cloudflared
+check: check-env
 	@echo ""
 	@echo "==> All checks passed! You're ready to use AudioShake CLI."

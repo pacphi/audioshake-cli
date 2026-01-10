@@ -5,7 +5,6 @@ This guide is for developers who want to contribute to the AudioShake CLI or bui
 ## Prerequisites
 
 - **Rust 1.92+**: Install via [rustup](https://rustup.rs/)
-- **cloudflared**: Required for local file processing (optional for development)
 - **Git**: For version control
 
 ## Getting Started
@@ -90,15 +89,13 @@ audioshake-cli/
 │   │   └── completion.rs   # Shell completions
 │   ├── api/                # API client
 │   │   ├── mod.rs
-│   │   ├── client.rs       # HTTP client
+│   │   ├── client.rs       # HTTP client with file upload
 │   │   ├── request.rs      # Request types
 │   │   └── response.rs     # Response types
 │   ├── config/             # Configuration management
 │   │   ├── mod.rs
 │   │   ├── loader.rs       # Config loading
 │   │   └── types.rs        # Config types
-│   ├── tunnel/             # Local file server
-│   │   └── mod.rs          # cloudflared tunnel
 │   ├── download/           # File downloads
 │   │   ├── mod.rs
 │   │   └── manager.rs      # Download manager
@@ -125,7 +122,7 @@ audioshake-cli/
 - **Async Runtime**: Uses tokio for all async operations
 - **Error Handling**: Uses thiserror for structured errors with good messages
 - **API Key Security**: Uses secrecy crate to prevent accidental logging
-- **Local File Support**: Uses axum for local HTTP server + cloudflared tunnel
+- **Local File Support**: Direct upload to AudioShake's servers via legacy API (see [ADR-001](adr/001-local-file-upload-strategy.md))
 
 ## Adding a New Command
 

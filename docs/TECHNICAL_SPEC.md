@@ -29,10 +29,10 @@ The AudioShake CLI is built using a modular architecture with clear separation o
           │             │             │             │
 ┌─────────▼─────────────▼─────────────▼─────────────▼─────────────┐
 │                         Core Services                           │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐ │
-│  │ api/client │  │  config/   │  │  download/ │  │  tunnel/   │ │
-│  │            │  │  loader    │  │  manager   │  │  server    │ │
-│  └────────────┘  └────────────┘  └────────────┘  └────────────┘ │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐                 │
+│  │ api/client │  │  config/   │  │  download/ │                 │
+│  │ (+ upload) │  │  loader    │  │  manager   │                 │
+│  └────────────┘  └────────────┘  └────────────┘                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -78,20 +78,15 @@ audioshake-cli/
 │   │
 │   ├── api/                   # API client
 │   │   ├── mod.rs
-│   │   ├── client.rs          # HTTP client wrapper
+│   │   ├── client.rs          # HTTP client with upload support
 │   │   ├── request.rs         # Request types
-│   │   ├── response.rs        # Response types
+│   │   ├── response.rs        # Response types (incl. UploadResponse)
 │   │   └── error.rs           # API errors
 │   │
 │   ├── config/                # Configuration
 │   │   ├── mod.rs
 │   │   ├── loader.rs          # Config loading logic
 │   │   └── types.rs           # Config types
-│   │
-│   ├── tunnel/                # Local file serving
-│   │   ├── mod.rs
-│   │   ├── server.rs          # Axum HTTP server
-│   │   └── cloudflared.rs     # Tunnel management
 │   │
 │   ├── download/              # File downloads
 │   │   ├── mod.rs
@@ -258,9 +253,6 @@ pub enum AppError {
     #[error("Download error: {0}")]
     Download(#[from] DownloadError),
 
-    #[error("Tunnel error: {0}")]
-    Tunnel(#[from] TunnelError),
-
     #[error("{0}")]
     User(String),
 }
@@ -320,22 +312,6 @@ pub enum DownloadError {
 
     #[error("File exists and --overwrite not specified: {path}")]
     FileExists { path: PathBuf },
-}
-
-/// Tunnel errors
-#[derive(Error, Debug)]
-pub enum TunnelError {
-    #[error("cloudflared not found. Install with: brew install cloudflared")]
-    CloudflaredNotFound,
-
-    #[error("Failed to start tunnel: {0}")]
-    StartFailed(String),
-
-    #[error("Tunnel terminated unexpectedly")]
-    Terminated,
-
-    #[error("Failed to parse tunnel URL")]
-    UrlParseFailed,
 }
 
 pub type Result<T> = std::result::Result<T, AppError>;
@@ -714,203 +690,78 @@ impl ApiClient {
 
 ---
 
-## Local File Server & Tunnel
+## File Upload
 
-### Tunnel Manager (src/tunnel/cloudflared.rs)
+Local files are uploaded directly to AudioShake's servers using the legacy API endpoint.
+See [ADR-001](adr/001-local-file-upload-strategy.md) for the decision rationale.
+
+### Upload Implementation (src/api/client.rs)
 
 ```rust
-use std::process::Stdio;
-use tokio::io::{AsyncBufReadExt, BufReader};
-use tokio::process::{Child, Command};
-use tracing::{debug, info};
-use url::Url;
+const LEGACY_UPLOAD_URL: &str = "https://groovy.audioshake.ai/upload";
 
-use crate::error::{Result, TunnelError};
+impl ApiClient {
+    /// Upload a local file to AudioShake's servers
+    pub async fn upload_file(&self, path: &Path) -> Result<UploadResponse> {
+        // Read file contents
+        let mut file = File::open(path).await?;
+        let mut contents = Vec::new();
+        file.read_to_end(&mut contents).await?;
 
-pub struct TunnelManager {
-    process: Option<Child>,
-    public_url: Option<Url>,
-}
+        let file_name = path.file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("file")
+            .to_string();
 
-impl TunnelManager {
-    pub fn new() -> Self {
-        Self {
-            process: None,
-            public_url: None,
-        }
-    }
-
-    pub async fn start(&mut self, local_port: u16) -> Result<Url> {
-        // Check if cloudflared is available
-        if !Self::is_cloudflared_available().await {
-            return Err(TunnelError::CloudflaredNotFound.into());
-        }
-
-        info!("Starting cloudflared tunnel for port {}", local_port);
-
-        let mut child = Command::new("cloudflared")
-            .args([
-                "tunnel",
-                "--url",
-                &format!("http://localhost:{}", local_port),
-                "--no-autoupdate",
-            ])
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .map_err(|e| TunnelError::StartFailed(e.to_string()))?;
-
-        // Parse the tunnel URL from stderr
-        let stderr = child.stderr.take()
-            .ok_or_else(|| TunnelError::StartFailed("No stderr".into()))?;
-
-        let mut reader = BufReader::new(stderr).lines();
-        let url = loop {
-            match reader.next_line().await {
-                Ok(Some(line)) => {
-                    debug!("cloudflared: {}", line);
-                    if let Some(url) = Self::extract_tunnel_url(&line) {
-                        break url;
-                    }
-                }
-                Ok(None) => return Err(TunnelError::Terminated.into()),
-                Err(e) => return Err(TunnelError::StartFailed(e.to_string()).into()),
-            }
+        // Determine MIME type from extension
+        let mime_type = match path.extension().and_then(|e| e.to_str()) {
+            Some("mp3") => "audio/mpeg",
+            Some("wav") => "audio/wav",
+            Some("mp4") => "video/mp4",
+            // ... other formats
+            _ => "application/octet-stream",
         };
 
-        self.process = Some(child);
-        self.public_url = Some(url.clone());
+        // Create multipart form
+        let part = Part::bytes(contents)
+            .file_name(file_name)
+            .mime_str(mime_type)?;
+        let form = Form::new().part("file", part);
 
-        info!("Tunnel started: {}", url);
-        Ok(url)
-    }
+        // Use longer timeout for large files
+        let upload_client = Client::builder()
+            .timeout(Duration::from_secs(600))
+            .build()?;
 
-    pub async fn stop(&mut self) {
-        if let Some(mut process) = self.process.take() {
-            let _ = process.kill().await;
-            let _ = process.wait().await;
-            info!("Tunnel stopped");
-        }
-    }
+        let response = upload_client
+            .post(LEGACY_UPLOAD_URL)
+            .header("Authorization", format!("Bearer {}", self.api_key.expose_secret()))
+            .multipart(form)
+            .send()
+            .await?;
 
-    pub fn public_url(&self) -> Option<&Url> {
-        self.public_url.as_ref()
-    }
-
-    async fn is_cloudflared_available() -> bool {
-        Command::new("cloudflared")
-            .arg("--version")
-            .output()
-            .await
-            .is_ok()
-    }
-
-    fn extract_tunnel_url(line: &str) -> Option<Url> {
-        // cloudflared outputs: "... https://xxx.trycloudflare.com ..."
-        line.split_whitespace()
-            .find(|word| word.starts_with("https://") && word.contains("trycloudflare.com"))
-            .and_then(|s| Url::parse(s).ok())
-    }
-}
-
-impl Drop for TunnelManager {
-    fn drop(&mut self) {
-        if let Some(mut process) = self.process.take() {
-            // Best effort cleanup
-            let _ = process.start_kill();
-        }
+        self.handle_response(response).await
     }
 }
 ```
 
-### Local Server (src/tunnel/server.rs)
+### Upload Response Type (src/api/response.rs)
 
 ```rust
-use axum::{
-    extract::Path,
-    http::StatusCode,
-    response::IntoResponse,
-    routing::get,
-    Router,
-};
-use std::net::SocketAddr;
-use std::path::PathBuf;
-use std::sync::Arc;
-use tokio::net::TcpListener;
-use tower_http::services::ServeFile;
-use tracing::info;
-use uuid::Uuid;
-
-pub struct LocalServer {
-    file_path: PathBuf,
-    token: String,
-    port: u16,
-    shutdown_tx: Option<tokio::sync::oneshot::Sender<()>>,
-}
-
-impl LocalServer {
-    pub fn new(file_path: PathBuf) -> Self {
-        Self {
-            file_path,
-            token: Uuid::new_v4().to_string(),
-            port: 0,
-            shutdown_tx: None,
-        }
-    }
-
-    pub async fn start(&mut self) -> crate::error::Result<u16> {
-        let file_path = self.file_path.clone();
-        let token = self.token.clone();
-
-        let app = Router::new()
-            .route(
-                &format!("/{}", token),
-                get(move || async move {
-                    ServeFile::new(&file_path)
-                })
-            )
-            .fallback(|| async { StatusCode::NOT_FOUND });
-
-        // Bind to random available port
-        let listener = TcpListener::bind("127.0.0.1:0").await?;
-        let addr = listener.local_addr()?;
-        self.port = addr.port();
-
-        let (tx, rx) = tokio::sync::oneshot::channel();
-        self.shutdown_tx = Some(tx);
-
-        info!("Local server started on port {}", self.port);
-
-        tokio::spawn(async move {
-            axum::serve(listener, app)
-                .with_graceful_shutdown(async {
-                    rx.await.ok();
-                })
-                .await
-                .ok();
-        });
-
-        Ok(self.port)
-    }
-
-    pub fn stop(&mut self) {
-        if let Some(tx) = self.shutdown_tx.take() {
-            let _ = tx.send(());
-            info!("Local server stopped");
-        }
-    }
-
-    pub fn port(&self) -> u16 {
-        self.port
-    }
-
-    pub fn token(&self) -> &str {
-        &self.token
-    }
-
-    pub fn file_url(&self) -> String {
-        format!("http://localhost:{}/{}", self.port, self.token)
-    }
+/// Response from file upload (legacy API)
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UploadResponse {
+    /// Uploaded file name
+    pub name: String,
+    /// Asset ID for job requests
+    pub id: String,
+    /// MIME type
+    pub file_type: String,
+    /// File extension
+    pub format: String,
+    /// Download URL for the uploaded file
+    pub link: Url,
 }
 ```
 
@@ -1176,10 +1027,8 @@ fn test_missing_api_key() {
 
 1. **API Key Protection**: Uses secrecy crate, never logged or displayed
 2. **HTTPS Only**: All API communication uses TLS
-3. **Local Server Binding**: Binds to localhost only (127.0.0.1)
-4. **Random Tokens**: File serving URLs include UUID tokens
-5. **Tunnel Security**: cloudflared provides secure tunneling
-6. **No Shell Injection**: All subprocess commands use array args
+3. **Direct Upload**: Files uploaded directly to AudioShake (no third-party intermediaries)
+4. **No Shell Injection**: All subprocess commands use array args
 
 ---
 

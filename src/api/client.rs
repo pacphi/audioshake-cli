@@ -1,17 +1,22 @@
 //! HTTP client for the `AudioShake` API
 
+use std::path::Path;
 use std::time::Duration;
 
+use reqwest::multipart::{Form, Part};
 use reqwest::{Client, Response, StatusCode};
 use secrecy::{ExposeSecret, SecretString};
+use tokio::fs::File;
+use tokio::io::AsyncReadExt;
 use tracing::{debug, instrument};
 use url::Url;
 
 use super::request::CreateTaskRequest;
-use super::response::{Task, TaskListResponse, TaskStatistics};
+use super::response::{Task, TaskListResponse, TaskStatistics, UploadResponse};
 use crate::error::{ApiError, Result};
 
 const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
+const LEGACY_UPLOAD_URL: &str = "https://groovy.audioshake.ai/upload";
 
 /// `AudioShake` API client
 #[derive(Clone)]
@@ -178,6 +183,78 @@ impl ApiClient {
         // Try to list tasks with a small limit
         let _ = self.list_tasks(None, 1, 0).await?;
         Ok(())
+    }
+
+    /// Upload a local file to `AudioShake`'s servers
+    ///
+    /// Uses the legacy API endpoint to upload files directly.
+    /// Returns the hosted URL that can be used with the Tasks API.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the upload fails.
+    #[instrument(skip(self))]
+    pub async fn upload_file(&self, path: &Path) -> Result<UploadResponse> {
+        debug!("Uploading file: {}", path.display());
+
+        // Read file contents
+        let mut file = File::open(path).await.map_err(|e| {
+            ApiError::Request(format!("Failed to open file {}: {e}", path.display()))
+        })?;
+
+        let mut contents = Vec::new();
+        file.read_to_end(&mut contents).await.map_err(|e| {
+            ApiError::Request(format!("Failed to read file {}: {e}", path.display()))
+        })?;
+
+        let file_name = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("file")
+            .to_string();
+
+        // Determine MIME type from extension
+        let mime_type = match path.extension().and_then(|e| e.to_str()) {
+            Some("mp3") => "audio/mpeg",
+            Some("wav") => "audio/wav",
+            Some("flac") => "audio/flac",
+            Some("aac") => "audio/aac",
+            Some("m4a") => "audio/mp4",
+            Some("ogg") => "audio/ogg",
+            Some("mp4") => "video/mp4",
+            Some("mov") => "video/quicktime",
+            Some("avi") => "video/x-msvideo",
+            Some("mkv") => "video/x-matroska",
+            Some("webm") => "video/webm",
+            _ => "application/octet-stream",
+        };
+
+        // Create multipart form
+        let part = Part::bytes(contents)
+            .file_name(file_name)
+            .mime_str(mime_type)
+            .map_err(|e| ApiError::Request(format!("Invalid MIME type: {e}")))?;
+
+        let form = Form::new().part("file", part);
+
+        // Use a longer timeout for uploads
+        let upload_client = Client::builder()
+            .user_agent(USER_AGENT)
+            .timeout(Duration::from_secs(600)) // 10 minutes for large files
+            .build()
+            .map_err(ApiError::from)?;
+
+        let response = upload_client
+            .post(LEGACY_UPLOAD_URL)
+            .header(
+                "Authorization",
+                format!("Bearer {}", self.api_key.expose_secret()),
+            )
+            .multipart(form)
+            .send()
+            .await?;
+
+        self.handle_response(response).await
     }
 
     async fn handle_response<T: serde::de::DeserializeOwned>(

@@ -11,7 +11,7 @@ A high-performance command-line interface for the [AudioShake API](https://devel
 - **Stem Separation**: Extract vocals, drums, bass, guitar, piano, and other instruments
 - **Transcription**: Convert speech to text with word-level timestamps
 - **Dialogue Extraction**: Isolate speech from audio/video for post-production
-- **Local File Support**: Process local files via cloudflared tunnel
+- **Local File Support**: Process local files via direct upload to AudioShake
 - **Async Processing**: Submit tasks and monitor progress or use webhooks
 - **Cross-Platform**: Runs on macOS, Linux, and Windows
 
@@ -26,19 +26,6 @@ cargo install audioshake-cli
 ### From Binary Releases
 
 Download the latest release for your platform from the GitHub Releases page (once published).
-
-### Prerequisites
-
-For local file processing, install [cloudflared](https://github.com/cloudflare/cloudflared):
-
-```bash
-# macOS
-brew install cloudflared
-
-# Linux
-curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
-chmod +x cloudflared && sudo mv cloudflared /usr/local/bin/
-```
 
 ## Quick Start
 

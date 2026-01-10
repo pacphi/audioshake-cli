@@ -49,10 +49,9 @@ make format-check         # Check formatting only
 - `src/cli/args.rs` - Clap argument definitions, Commands enum
 
 ### Core Modules
-- `src/api/` - HTTP client (`client.rs`), request/response types
+- `src/api/` - HTTP client (`client.rs`) with direct file upload, request/response types
 - `src/commands/` - Command implementations (process, task/*, models, config, completion)
 - `src/config/` - Configuration loading from env, .env, TOML file
-- `src/tunnel/` - Local file serving via Axum + cloudflared tunnel
 - `src/download/` - Result file download orchestration
 - `src/error.rs` - Structured error types with thiserror
 
@@ -64,8 +63,7 @@ make format-check         # Check formatting only
 
 ### Dependencies to Know
 - `clap` for CLI parsing
-- `reqwest` for HTTP client
-- `axum` for local file serving
+- `reqwest` for HTTP client (including multipart file uploads)
 - `tracing` for logging
 - `wiremock` + `assert_cmd` for testing
 

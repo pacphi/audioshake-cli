@@ -15,7 +15,6 @@ mod config;
 mod download;
 mod error;
 mod output;
-mod tunnel;
 
 use cli::args::{Cli, Commands};
 use error::Result;
