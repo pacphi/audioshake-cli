@@ -69,7 +69,7 @@ thiserror = "2.0"
 anyhow = "1.0"
 
 # Progress & Output
-indicatif = { version = "0.17", features = ["tokio"] }
+indicatif = { version = "0.18", features = ["tokio"] }
 console = "0.15"
 comfy-table = "7.1"
 
