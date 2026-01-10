@@ -82,7 +82,7 @@ futures = "0.3"
 futures-util = "0.3"
 async-trait = "0.1"
 uuid = { version = "1.19", features = ["v4"] }
-rand = "0.8"
+rand = "0.9"
 
 # Security
 secrecy = { version = "0.10", features = ["serde"] }
