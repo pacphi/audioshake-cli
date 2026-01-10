@@ -1,5 +1,9 @@
 # AudioShake CLI
 
+[![CI](https://github.com/pacphi/audioshake-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/pacphi/audioshake-cli/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/pacphi/audioshake-cli/branch/main/graph/badge.svg)](https://codecov.io/gh/pacphi/audioshake-cli)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A high-performance command-line interface for the [AudioShake API](https://developer.audioshake.ai/), built in Rust.
 
 ## Features
