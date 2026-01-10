@@ -21,7 +21,12 @@ pub struct Cli {
     pub quiet: bool,
 
     /// API key (overrides `AUDIOSHAKE_API_KEY` environment variable)
-    #[arg(long, env = "AUDIOSHAKE_API_KEY", hide_env_values = true, global = true)]
+    #[arg(
+        long,
+        env = "AUDIOSHAKE_API_KEY",
+        hide_env_values = true,
+        global = true
+    )]
     pub api_key: Option<SecretString>,
 
     /// Override API base URL

@@ -36,10 +36,7 @@ pub async fn execute(args: ProcessArgs, config: &AppConfig) -> Result<()> {
             )));
         }
 
-        println!(
-            "{}",
-            console::style("Starting local file server...").dim()
-        );
+        println!("{}", console::style("Starting local file server...").dim());
 
         let mut tunnel = TunnelService::new(path.to_path_buf());
         let url = tunnel.start().await?;
@@ -76,7 +73,11 @@ async fn process_with_url(
     }
 
     // Add targets
-    let formats: Vec<String> = args.formats.iter().map(|f| f.api_name().to_string()).collect();
+    let formats: Vec<String> = args
+        .formats
+        .iter()
+        .map(|f| f.api_name().to_string())
+        .collect();
 
     for model in &args.models {
         let mut target = TaskTarget::new(model.api_name(), formats.clone());
@@ -156,11 +157,7 @@ async fn process_with_url(
                     let files = manager.download_task(&task).await?;
 
                     for file in files {
-                        println!(
-                            "  {} {}",
-                            console::style("→").green(),
-                            file.display()
-                        );
+                        println!("  {} {}", console::style("→").green(), file.display());
                     }
                 }
             }

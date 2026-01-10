@@ -34,8 +34,10 @@ impl AppConfig {
     /// Get the configuration directory path
     #[must_use]
     pub fn config_dir() -> PathBuf {
-        directories::ProjectDirs::from("ai", "audioshake", "audioshake-cli")
-            .map_or_else(|| PathBuf::from("."), |dirs| dirs.config_dir().to_path_buf())
+        directories::ProjectDirs::from("ai", "audioshake", "audioshake-cli").map_or_else(
+            || PathBuf::from("."),
+            |dirs| dirs.config_dir().to_path_buf(),
+        )
     }
 
     /// Get the configuration file path

@@ -63,11 +63,7 @@ pub async fn execute(
                 let files = manager.download_task(&task).await?;
 
                 for file in files {
-                    println!(
-                        "  {} {}",
-                        console::style("→").green(),
-                        file.display()
-                    );
+                    println!("  {} {}", console::style("→").green(), file.display());
                 }
             }
         }

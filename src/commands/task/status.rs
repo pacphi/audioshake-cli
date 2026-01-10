@@ -21,7 +21,10 @@ pub async fn execute(task_id: &str, config: &AppConfig) -> Result<()> {
             TaskStatus::Pending => console::style(task.status.as_str()).dim(),
         }
     );
-    println!("Created: {}", task.created_at.format("%Y-%m-%d %H:%M:%S UTC"));
+    println!(
+        "Created: {}",
+        task.created_at.format("%Y-%m-%d %H:%M:%S UTC")
+    );
 
     if let Some(completed) = task.completed_at {
         println!("Completed: {}", completed.format("%Y-%m-%d %H:%M:%S UTC"));

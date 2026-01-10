@@ -34,7 +34,9 @@ pub enum AppError {
 /// Configuration-related errors
 #[derive(Error, Debug)]
 pub enum ConfigError {
-    #[error("API key not configured. Set AUDIOSHAKE_API_KEY environment variable or use --api-key")]
+    #[error(
+        "API key not configured. Set AUDIOSHAKE_API_KEY environment variable or use --api-key"
+    )]
     MissingApiKey,
 
     #[error("Invalid configuration file: {0}")]

@@ -93,10 +93,7 @@ impl DownloadManager {
     }
 
     fn create_progress_bar(&self, path: &Path, size: Option<u64>) -> ProgressBar {
-        let filename = path
-            .file_name()
-            .and_then(|s| s.to_str())
-            .unwrap_or("file");
+        let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("file");
 
         let bar = size.map_or_else(
             || {

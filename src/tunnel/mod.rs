@@ -162,9 +162,7 @@ impl TunnelService {
     fn extract_tunnel_url(line: &str) -> Option<Url> {
         // cloudflared outputs: "... https://xxx.trycloudflare.com ..."
         line.split_whitespace()
-            .find(|word| {
-                word.starts_with("https://") && word.contains("trycloudflare.com")
-            })
+            .find(|word| word.starts_with("https://") && word.contains("trycloudflare.com"))
             .and_then(|s| Url::parse(s).ok())
     }
 }

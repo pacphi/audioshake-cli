@@ -37,7 +37,17 @@ pub async fn execute(command: TaskCommands, config: &AppConfig) -> Result<()> {
             poll_interval,
             download,
             output_dir,
-        } => wait::execute(&task_id, timeout, poll_interval, download, output_dir, config).await,
+        } => {
+            wait::execute(
+                &task_id,
+                timeout,
+                poll_interval,
+                download,
+                output_dir,
+                config,
+            )
+            .await
+        }
         TaskCommands::Statistics { since, before } => {
             statistics::execute(since, before, config).await
         }

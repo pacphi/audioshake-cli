@@ -171,7 +171,11 @@ fn print_simple_list(models: &[&ModelInfo]) {
             current_category = model.category;
         }
 
-        let hq = if model.supports_hq { " (HQ available)" } else { "" };
+        let hq = if model.supports_hq {
+            " (HQ available)"
+        } else {
+            ""
+        };
         println!(
             "  {:<16} {}{}",
             console::style(model.name).cyan(),
@@ -184,7 +188,13 @@ fn print_simple_list(models: &[&ModelInfo]) {
 fn print_detailed_table(models: &[&ModelInfo]) {
     let mut table = Table::new();
     table.load_preset(UTF8_FULL);
-    table.set_header(vec!["Model", "Description", "Category", "Credits/Min", "HQ"]);
+    table.set_header(vec![
+        "Model",
+        "Description",
+        "Category",
+        "Credits/Min",
+        "HQ",
+    ]);
 
     for model in models {
         table.add_row(vec![

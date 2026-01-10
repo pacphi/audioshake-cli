@@ -38,11 +38,7 @@ pub async fn execute(
 
     println!();
     for file in files {
-        println!(
-            "  {} {}",
-            console::style("✓").green(),
-            file.display()
-        );
+        println!("  {} {}", console::style("✓").green(), file.display());
     }
 
     Ok(())

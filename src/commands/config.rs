@@ -105,9 +105,8 @@ fn set(key: &str, value: &str) -> Result<()> {
     }
 
     // Write config
-    let content = toml::to_string_pretty(&config).map_err(|e| {
-        crate::error::AppError::User(format!("Failed to serialize config: {e}"))
-    })?;
+    let content = toml::to_string_pretty(&config)
+        .map_err(|e| crate::error::AppError::User(format!("Failed to serialize config: {e}")))?;
 
     fs::write(&config_path, content)?;
 
@@ -147,9 +146,8 @@ fn init(force: bool) -> Result<()> {
     }
 
     // Write config
-    let content = toml::to_string_pretty(&config).map_err(|e| {
-        crate::error::AppError::User(format!("Failed to serialize config: {e}"))
-    })?;
+    let content = toml::to_string_pretty(&config)
+        .map_err(|e| crate::error::AppError::User(format!("Failed to serialize config: {e}")))?;
 
     fs::write(&config_path, content)?;
 
@@ -174,10 +172,7 @@ async fn validate(config: &AppConfig) -> Result<()> {
     // Check API key format
     let api_key = config.api_key.expose_secret();
     if api_key.starts_with("ashke_") {
-        println!(
-            "  {} API key format valid",
-            console::style("[OK]").green()
-        );
+        println!("  {} API key format valid", console::style("[OK]").green());
     } else {
         println!(
             "  {} API key format may be invalid (expected 'ashke_' prefix)",
