@@ -23,7 +23,7 @@ jobs:
       version: ${{ steps.get_version.outputs.version }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -47,7 +47,7 @@ jobs:
 
       - name: Create Release
         id: create_release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
@@ -114,7 +114,7 @@ jobs:
             extension: .exe
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -155,7 +155,7 @@ jobs:
 
       - name: Upload release artifact (Unix)
         if: matrix.os != 'windows-latest'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: release/audioshake-${{ needs.create-release.outputs.version }}-${{ matrix.suffix }}.tar.gz
         env:
@@ -163,7 +163,7 @@ jobs:
 
       - name: Upload release artifact (Windows)
         if: matrix.os == 'windows-latest'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: release/audioshake-${{ needs.create-release.outputs.version }}-${{ matrix.suffix }}.zip
         env:
@@ -179,7 +179,7 @@ jobs:
     needs: [create-release, build-binaries]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Check for registry token
         id: check_token
