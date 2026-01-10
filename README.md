@@ -172,6 +172,41 @@ default_timeout = 3600
 - `transcription` - Speech to text
 - `alignment` - Word-level timestamps
 
+### Sample interaction with Claude Code
+
+```text
+
+ ▐▛███▜▌   Claude Code v2.1.3
+▝▜█████▛▘  Opus 4.5 · Claude Max
+  ▘▘ ▝▝    ~/Documents/development/ai/audioshake-cli
+
+❯ I need to isolate the voices from music inside this video:
+  /Users/cphillipson/Movies/build-with-me/build-with-me-episode7-2026-01-10.mp4. Is there a CLI
+  command available that will do that for me?
+
+⏺ Based on the audioshake-cli project you have open, yes! This CLI can separate vocals from music. Let me check the exact command syntax for you.
+
+⏺ Bash(cargo run -- process --help 2>/dev/null || cargo run -- --help 2>/dev/null) timeout: 1m 0s
+  ⎿  Command-line interface for the AudioShake audio processing API
+
+     Usage: audioshake [OPTIONS] <COMMAND>
+     … +24 lines (ctrl+o to expand)
+
+⏺ To isolate voices (vocals) from your video, run:
+
+  audioshake process "/Users/cphillipson/Movies/build-with-me/build-with-me-episode7-2026-01-10.mp4" --model vocals --wait --output-dir ./output
+
+  This will:
+  1. Submit your video file for processing
+  2. Use the vocals model to separate voices from music
+  3. Wait for completion and download the result to ./output
+
+  Note: You'll need an AUDIOSHAKE_API_KEY environment variable set (or pass --api-key).
+
+  If you also want the instrumental track (music without vocals), add another model:
+  audioshake process "/Users/cphillipson/Movies/build-with-me/build-with-me-episode7-2026-01-10.mp4" --model vocals --model instrumental --wait
+```
+
 ## Documentation
 
 - [CLI Reference](docs/CLI_REFERENCE.md) - Complete command documentation

@@ -34,7 +34,7 @@ pub struct Cli {
     pub base_url: Url,
 
     /// Output format for command results
-    #[arg(short, long, value_enum, default_value = "text", global = true)]
+    #[arg(long, value_enum, default_value = "text", global = true)]
     pub output_format: OutputFormat,
 
     #[command(subcommand)]
