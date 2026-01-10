@@ -62,7 +62,7 @@ toml = "0.8"
 
 # Environment & Configuration
 dotenvy = "0.15"
-directories = "5.0"
+directories = "6.0"
 
 # Error Handling
 thiserror = "2.0"
