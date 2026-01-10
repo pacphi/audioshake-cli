@@ -42,7 +42,7 @@ tokio = { version = "1.49", features = [
 ] }
 
 # HTTP Client
-reqwest = { version = "0.12", default-features = false, features = [
+reqwest = { version = "0.13", default-features = false, features = [
     "json",
     "stream",
     "rustls-tls",
