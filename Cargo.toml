@@ -42,10 +42,10 @@ tokio = { version = "1.49", features = [
 ] }
 
 # HTTP Client
-reqwest = { version = "0.12", default-features = false, features = [
+reqwest = { version = "0.13", default-features = false, features = [
     "json",
     "stream",
-    "rustls-tls",
+    "rustls",
     "gzip",
 ] }
 
@@ -58,19 +58,19 @@ tower-http = { version = "0.6", features = ["fs", "cors"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
-toml = "0.8"
+toml = "0.9"
 
 # Environment & Configuration
 dotenvy = "0.15"
-directories = "5.0"
+directories = "6.0"
 
 # Error Handling
 thiserror = "2.0"
 anyhow = "1.0"
 
 # Progress & Output
-indicatif = { version = "0.17", features = ["tokio"] }
-console = "0.15"
+indicatif = { version = "0.18", features = ["tokio"] }
+console = "0.16"
 comfy-table = "7.1"
 
 # Utilities
@@ -82,7 +82,7 @@ futures = "0.3"
 futures-util = "0.3"
 async-trait = "0.1"
 uuid = { version = "1.19", features = ["v4"] }
-rand = "0.8"
+rand = "0.9"
 
 # Security
 secrecy = { version = "0.10", features = ["serde"] }
