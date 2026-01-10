@@ -149,6 +149,7 @@ jobs:
           path: |
             target/nextest/
           retention-days: 7
+          overwrite: true
 
   # ============================================
   # Test Coverage
@@ -202,6 +203,7 @@ jobs:
           name: coverage-report
           path: coverage/
           retention-days: 7
+          overwrite: true
 
   # ============================================
   # Build Release Binary
@@ -233,9 +235,10 @@ jobs:
       - name: Upload release artifacts
         uses: actions/upload-artifact@v6
         with:
-          name: audioshake-linux-amd64
+          name: audioshake-release-binary
           path: target/release/audioshake
           retention-days: 7
+          overwrite: true
 
   # ============================================
   # Build Matrix (Cross-platform)
@@ -288,6 +291,7 @@ jobs:
           name: audioshake-${{ matrix.suffix }}
           path: target/${{ matrix.target }}/release/audioshake${{ matrix.extension }}
           retention-days: 7
+          overwrite: true
 
   # ============================================
   # CI Success Check
