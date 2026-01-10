@@ -70,7 +70,7 @@ anyhow = "1.0"
 
 # Progress & Output
 indicatif = { version = "0.17", features = ["tokio"] }
-console = "0.15"
+console = "0.16"
 comfy-table = "7.1"
 
 # Utilities
