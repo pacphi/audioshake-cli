@@ -1,0 +1,204 @@
+# AudioShake CLI
+
+A high-performance command-line interface for the [AudioShake API](https://developer.audioshake.ai/), built in Rust.
+
+## Features
+
+- **Stem Separation**: Extract vocals, drums, bass, guitar, piano, and other instruments
+- **Transcription**: Convert speech to text with word-level timestamps
+- **Dialogue Extraction**: Isolate speech from audio/video for post-production
+- **Local File Support**: Process local files via cloudflared tunnel
+- **Async Processing**: Submit tasks and monitor progress or use webhooks
+- **Cross-Platform**: Runs on macOS, Linux, and Windows
+
+## Installation
+
+### From Cargo
+
+```bash
+cargo install audioshake-cli
+```
+
+### From Binary Releases
+
+Download the latest release for your platform from the GitHub Releases page (once published).
+
+### Prerequisites
+
+For local file processing, install [cloudflared](https://github.com/cloudflare/cloudflared):
+
+```bash
+# macOS
+brew install cloudflared
+
+# Linux
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
+chmod +x cloudflared && sudo mv cloudflared /usr/local/bin/
+```
+
+## Quick Start
+
+1. Get an API key from the [AudioShake Dashboard](https://dashboard.audioshake.ai)
+
+2. Set your API key:
+
+```bash
+export AUDIOSHAKE_API_KEY=ashke_your_api_key_here
+# Or create a .env file
+echo "AUDIOSHAKE_API_KEY=ashke_your_api_key_here" > .env
+```
+
+3. Process an audio file:
+
+```bash
+# Extract vocals from a song
+audioshake process song.mp3 -m vocals --wait
+
+# High-quality stem separation
+audioshake process track.wav -m vocals -m instrumental --hq --wait -o ./stems
+
+# Transcribe audio
+audioshake process podcast.mp3 -m transcription -f json --wait
+```
+
+## Usage Examples
+
+### Stem Separation
+
+```bash
+# Basic vocal extraction
+audioshake process song.mp3 -m vocals --wait
+
+# Full band separation
+audioshake process song.mp3 -m vocals -m drums -m bass -m guitar -m piano --wait
+
+# High-quality variant (1.5 credits/min)
+audioshake process track.wav -m vocals -m instrumental --hq --wait
+```
+
+### Transcription
+
+```bash
+# Text transcription
+audioshake process interview.mp3 -m transcription -f txt --wait
+
+# With word-level timestamps
+audioshake process podcast.mp3 -m transcription -m alignment -f json --wait
+
+# Spanish transcription
+audioshake process audio.mp3 -m transcription --language es --wait
+```
+
+### Video Processing
+
+```bash
+# Extract dialogue from video
+audioshake process video.mp4 -m dialogue -m effects -f wav --wait
+```
+
+### Task Management
+
+```bash
+# Submit task without waiting
+audioshake process song.mp3 -m vocals
+# Output: Task created: abc123-def456
+
+# Check status
+audioshake task status abc123-def456
+
+# Download results when complete
+audioshake task download abc123-def456 -o ./output
+```
+
+## Commands
+
+| Command                      | Description                       |
+| ---------------------------- | --------------------------------- |
+| `audioshake process`         | Submit audio/video for processing |
+| `audioshake task list`       | List tasks                        |
+| `audioshake task status`     | Get task status                   |
+| `audioshake task download`   | Download task outputs             |
+| `audioshake task wait`       | Wait for task completion          |
+| `audioshake task statistics` | Show usage statistics             |
+| `audioshake models`          | List available models             |
+| `audioshake config`          | Manage configuration              |
+| `audioshake completion`      | Generate shell completions        |
+
+## Configuration
+
+Configuration is loaded from (in order of priority):
+
+1. `--api-key` command line flag
+2. `AUDIOSHAKE_API_KEY` environment variable
+3. `.env` file in current directory
+4. `~/.config/audioshake/config.toml`
+
+### Config File Example
+
+```toml
+api_key = "ashke_your_api_key_here"
+base_url = "https://api.audioshake.ai"
+default_output_dir = "./output"
+default_format = "wav"
+default_poll_interval = 5
+default_timeout = 3600
+```
+
+## Available Models
+
+### Stem Separation
+
+- `vocals` - Isolated vocal track
+- `instrumental` - Instrumental (no vocals)
+- `drums` - Drum track
+- `bass` - Bass track
+- `guitar` - Guitar track
+- `piano` - Piano track
+- `strings` - String instruments
+- `wind` - Wind instruments
+
+### Dialogue/Music/Effects
+
+- `dialogue` - Isolated speech
+- `effects` - Sound effects and ambience
+- `music_detection` - Detect music sections
+
+### Transcription
+
+- `transcription` - Speech to text
+- `alignment` - Word-level timestamps
+
+## Documentation
+
+- [CLI Reference](docs/CLI_REFERENCE.md) - Complete command documentation
+- [API Integration](docs/API_INTEGRATION.md) - API details and examples
+- [Technical Spec](docs/TECHNICAL_SPEC.md) - Architecture and implementation
+- [PRD](docs/PRD.md) - Product requirements
+
+## Development
+
+```bash
+# Clone repository
+git clone https://github.com/pacphi/audioshake-cli.git
+cd audioshake-cli
+
+# Install dependencies
+make install
+
+# Build
+make build
+
+# Run tests
+make test
+
+# Run linter
+make lint
+```
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+## Support
+
+- [AudioShake Developer Portal](https://developer.audioshake.ai/)

@@ -1,0 +1,42 @@
+# Rust build artifacts
+/target/
+Cargo.lock
+
+# Node dependencies
+node_modules/
+pnpm-lock.yaml
+
+# Lychee cache
+.lycheecache
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Coverage
+/coverage/
+*.profraw
+*.profdata
+
+# Logs
+*.log
+
+# Output directories
+/output/
+
+# Test artifacts
+/tests/fixtures/output/
+
+/undefined/

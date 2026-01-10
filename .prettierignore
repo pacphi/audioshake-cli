@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+target/
+
+# Package manager
+pnpm-lock.yaml
+Cargo.lock
+
+# Generated files
+*.min.js
+*.min.css
+
+# Other
+undefined/

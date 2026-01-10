@@ -1,0 +1,121 @@
+[package]
+name = "audioshake-cli"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.92"
+authors = ["AudioShake CLI Contributors"]
+description = "Command-line interface for the AudioShake audio processing API"
+license = "MIT"
+repository = "https://github.com/pacphi/audioshake-cli"
+homepage = "https://github.com/audioshake/audioshake-cli"
+documentation = "https://docs.rs/audioshake-cli"
+readme = "README.md"
+keywords = ["audio", "stems", "separation", "transcription", "cli"]
+categories = ["command-line-utilities", "multimedia::audio"]
+
+include = [
+    "src/**/*",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE",
+]
+
+[[bin]]
+name = "audioshake"
+path = "src/main.rs"
+
+[dependencies]
+# CLI Framework
+clap = { version = "4.5", features = ["derive", "env", "wrap_help", "color"] }
+clap_complete = "4.5"
+
+# Async Runtime
+tokio = { version = "1.49", features = [
+    "rt-multi-thread",
+    "macros",
+    "fs",
+    "signal",
+    "process",
+    "net",
+    "io-util",
+    "time",
+] }
+
+# HTTP Client
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "stream",
+    "rustls-tls",
+    "gzip",
+] }
+
+# HTTP Server (for local file serving)
+axum = "0.8"
+tower = "0.5"
+tower-http = { version = "0.6", features = ["fs", "cors"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+toml = "0.8"
+
+# Environment & Configuration
+dotenvy = "0.15"
+directories = "5.0"
+
+# Error Handling
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Progress & Output
+indicatif = { version = "0.17", features = ["tokio"] }
+console = "0.15"
+comfy-table = "7.1"
+
+# Utilities
+url = { version = "2.5", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+humantime = "2.3"
+humansize = "2.1"
+futures = "0.3"
+futures-util = "0.3"
+async-trait = "0.1"
+uuid = { version = "1.19", features = ["v4"] }
+rand = "0.8"
+
+# Security
+secrecy = { version = "0.10", features = ["serde"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Streaming
+tokio-stream = "0.1"
+
+[dev-dependencies]
+tokio-test = "0.4"
+wiremock = "0.6"
+assert_cmd = "2.1"
+predicates = "3.1"
+tempfile = "3.24"
+insta = { version = "1.46", features = ["yaml"] }
+
+[profile.release]
+lto = true
+strip = true
+codegen-units = 1
+panic = "abort"
+opt-level = 3
+
+[profile.dev]
+opt-level = 1
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = "warn"
+pedantic = "warn"
+nursery = "warn"

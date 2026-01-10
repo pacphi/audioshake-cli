@@ -1,0 +1,16 @@
+# Lychee ignore file
+# https://lychee.cli.rs/usage/cli/#ignoring-links
+# Note: Patterns are REGEX, not glob patterns
+
+# Build artifacts
+^file://.*/target/.*
+
+# Node modules
+^file://.*/node_modules/.*
+
+# Cargo registry cache
+^file://.*undefined/.*
+
+# Local development URLs
+^https?://localhost.*
+^https?://127\.0\.0\.1.*
