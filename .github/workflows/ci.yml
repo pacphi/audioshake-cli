@@ -271,6 +271,9 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.9
+
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
         with:
