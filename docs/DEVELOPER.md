@@ -89,9 +89,14 @@ audioshake-cli/
 │   │   └── completion.rs   # Shell completions
 │   ├── api/                # API client
 │   │   ├── mod.rs
-│   │   ├── client.rs       # HTTP client with file upload
+│   │   ├── client.rs       # HTTP client for Tasks API
 │   │   ├── request.rs      # Request types
 │   │   └── response.rs     # Response types
+│   │
+│   ├── storage/            # Cloud storage for local files
+│   │   ├── mod.rs          # StorageProvider trait
+│   │   ├── config.rs       # Storage configuration types
+│   │   └── r2.rs           # Cloudflare R2 implementation
 │   ├── config/             # Configuration management
 │   │   ├── mod.rs
 │   │   ├── loader.rs       # Config loading
@@ -122,7 +127,7 @@ audioshake-cli/
 - **Async Runtime**: Uses tokio for all async operations
 - **Error Handling**: Uses thiserror for structured errors with good messages
 - **API Key Security**: Uses secrecy crate to prevent accidental logging
-- **Local File Support**: Direct upload to AudioShake's servers via legacy API (see [ADR-001](adr/001-local-file-upload-strategy.md))
+- **Local File Support**: Upload to Cloudflare R2 cloud storage (see [ADR-002](adr/002-cloud-storage-upload-strategy.md))
 
 ## Adding a New Command
 

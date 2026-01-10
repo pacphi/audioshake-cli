@@ -38,14 +38,14 @@ pub async fn execute(
             Duration::from_secs(poll_interval),
             Duration::from_secs(timeout),
             |t| {
-                spinner.set_message(format!("Status: {}", t.status));
+                spinner.set_message(format!("Status: {}", t.effective_status()));
             },
         )
         .await?;
 
     spinner.finish_and_clear();
 
-    match task.status {
+    match task.effective_status() {
         TaskStatus::Completed => {
             println!(
                 "{} Task completed successfully!",

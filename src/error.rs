@@ -12,6 +12,9 @@ pub enum AppError {
     #[error("API error: {0}")]
     Api(#[from] ApiError),
 
+    #[error("Storage error: {0}")]
+    Storage(#[from] StorageError),
+
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 
@@ -89,6 +92,32 @@ impl ApiError {
     pub const fn is_rate_limited(&self) -> bool {
         matches!(self, Self::RateLimited)
     }
+}
+
+/// Storage-related errors
+#[derive(Error, Debug)]
+#[allow(dead_code)] // Some variants reserved for future use
+pub enum StorageError {
+    #[error("Storage not configured. Run 'audioshake config storage' or provide a public URL.")]
+    NotConfigured,
+
+    #[error("Invalid storage credentials")]
+    InvalidCredentials,
+
+    #[error("Storage bucket not found: {bucket}")]
+    BucketNotFound { bucket: String },
+
+    #[error("Upload failed: {0}")]
+    UploadFailed(String),
+
+    #[error("Delete failed: {0}")]
+    DeleteFailed(String),
+
+    #[error("Public access not enabled for bucket")]
+    PublicAccessDisabled,
+
+    #[error("Invalid URL: {0}")]
+    InvalidUrl(String),
 }
 
 /// Download-related errors

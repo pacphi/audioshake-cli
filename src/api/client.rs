@@ -16,6 +16,14 @@ use super::response::{Task, TaskListResponse, TaskStatistics, UploadResponse};
 use crate::error::{ApiError, Result};
 
 const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
+
+/// Legacy upload endpoint - deprecated in favor of cloud storage (R2/S3)
+/// See ADR-002 for details on the new cloud storage upload strategy.
+#[deprecated(
+    since = "0.2.0",
+    note = "Use cloud storage (R2) upload instead. Configure with `audioshake config storage`. See ADR-002."
+)]
+#[allow(dead_code)]
 const LEGACY_UPLOAD_URL: &str = "https://groovy.audioshake.ai/upload";
 
 /// `AudioShake` API client
@@ -159,7 +167,7 @@ impl ApiClient {
             let task = self.get_task(task_id).await?;
             on_status(&task);
 
-            if task.status.is_terminal() {
+            if task.effective_status().is_terminal() {
                 return Ok(task);
             }
 
@@ -185,14 +193,25 @@ impl ApiClient {
         Ok(())
     }
 
-    /// Upload a local file to `AudioShake`'s servers
+    /// Upload a local file to `AudioShake`'s servers (DEPRECATED)
     ///
     /// Uses the legacy API endpoint to upload files directly.
     /// Returns the hosted URL that can be used with the Tasks API.
     ///
+    /// # Deprecation
+    ///
+    /// This method uses the legacy upload API which requires a separate authentication
+    /// token and may be unreliable. Use cloud storage (Cloudflare R2) instead.
+    /// See ADR-002 for the recommended approach.
+    ///
     /// # Errors
     ///
     /// Returns an error if the upload fails.
+    #[deprecated(
+        since = "0.2.0",
+        note = "Use cloud storage (R2) upload instead. Configure with `audioshake config storage`. See ADR-002."
+    )]
+    #[allow(dead_code)]
     #[instrument(skip(self))]
     pub async fn upload_file(&self, path: &Path) -> Result<UploadResponse> {
         debug!("Uploading file: {}", path.display());
@@ -244,6 +263,7 @@ impl ApiClient {
             .build()
             .map_err(ApiError::from)?;
 
+        #[allow(deprecated)]
         let response = upload_client
             .post(LEGACY_UPLOAD_URL)
             .header(
@@ -264,7 +284,11 @@ impl ApiClient {
         let status = response.status();
 
         if status.is_success() {
-            Ok(response.json().await.map_err(ApiError::from)?)
+            let body = response.text().await.map_err(ApiError::from)?;
+            Ok(serde_json::from_str(&body).map_err(|e| {
+                debug!("Failed to parse response: {}", body);
+                ApiError::Request(format!("Failed to parse API response: {e}. Body: {body}"))
+            })?)
         } else {
             let message = response.text().await.unwrap_or_default();
 

@@ -11,7 +11,7 @@ A high-performance command-line interface for the [AudioShake API](https://devel
 - **Stem Separation**: Extract vocals, drums, bass, guitar, piano, and other instruments
 - **Transcription**: Convert speech to text with word-level timestamps
 - **Dialogue Extraction**: Isolate speech from audio/video for post-production
-- **Local File Support**: Process local files via direct upload to AudioShake
+- **Local File Support**: Process local files via Cloudflare R2 cloud storage
 - **Async Processing**: Submit tasks and monitor progress or use webhooks
 - **Cross-Platform**: Runs on macOS, Linux, and Windows
 
@@ -133,7 +133,49 @@ default_output_dir = "./output"
 default_format = "wav"
 default_poll_interval = 5
 default_timeout = 3600
+
+# Cloud storage for local file uploads (required for local file processing)
+[storage]
+provider = "r2"
+bucket = "my-audioshake-uploads"
+public_url_base = "https://my-audioshake-uploads.r2.dev"
+
+[storage.r2]
+account_id = "your_cloudflare_account_id"
+access_key_id = "your_r2_access_key"
+# secret_access_key set via AUDIOSHAKE_R2_SECRET_ACCESS_KEY env var
 ```
+
+### Cloud Storage Setup (for Local Files)
+
+The AudioShake Tasks API requires publicly accessible URLs. To process local files, you need to configure cloud storage (Cloudflare R2 recommended for zero egress fees):
+
+1. **Create a Cloudflare account** at [dash.cloudflare.com](https://dash.cloudflare.com)
+
+2. **Create an R2 bucket**:
+   - Go to R2 Object Storage
+   - Create a bucket (e.g., `audioshake-uploads`)
+   - Enable public access in Settings (r2.dev subdomain)
+
+3. **Create an R2 API token**:
+   - Go to R2 → Manage API Tokens
+   - Create a token with "Object Read & Write" permissions
+
+4. **Configure the CLI**:
+
+```bash
+# Via environment variables
+export AUDIOSHAKE_STORAGE_PROVIDER=r2
+export AUDIOSHAKE_STORAGE_BUCKET=my-audioshake-uploads
+export AUDIOSHAKE_STORAGE_PUBLIC_URL_BASE=https://my-audioshake-uploads.r2.dev
+export AUDIOSHAKE_R2_ACCOUNT_ID=your_account_id
+export AUDIOSHAKE_R2_ACCESS_KEY_ID=your_access_key
+export AUDIOSHAKE_R2_SECRET_ACCESS_KEY=your_secret_key
+
+# Or add to .env file
+```
+
+See [ADR-002](docs/adr/002-cloud-storage-upload-strategy.md) for technical details.
 
 ## Available Models
 
@@ -158,6 +200,19 @@ default_timeout = 3600
 
 - `transcription` - Speech to text
 - `alignment` - Word-level timestamps
+
+### Multi-Speaker Separation (Enterprise)
+
+- `multi_voice` - Separate individual speakers into distinct tracks
+
+> **Note:** The `multi_voice` model requires enterprise account enablement. Standard developer accounts will receive an "Insufficient credits" error even with available credits. Contact [info@audioshake.ai](mailto:info@audioshake.ai) to request access.
+>
+> See: [AudioShake Multi-Speaker Separation](https://www.audioshake.ai/products/multi-speaker-separation)
+
+```bash
+# Requires enterprise access
+audioshake process podcast.mp3 -m multi-voice --variant n_speaker --wait
+```
 
 ### Sample interaction with Claude Code
 

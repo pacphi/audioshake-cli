@@ -81,6 +81,13 @@ impl TaskTarget {
         self
     }
 
+    /// Set a custom variant
+    #[must_use]
+    pub fn with_variant(mut self, variant: impl Into<String>) -> Self {
+        self.variant = Some(variant.into());
+        self
+    }
+
     /// Set language for transcription
     #[must_use]
     pub fn with_language(mut self, lang: impl Into<String>) -> Self {

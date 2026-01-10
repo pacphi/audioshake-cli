@@ -45,27 +45,38 @@ make format-check         # Check formatting only
 ## Architecture
 
 ### Entry Point & CLI Flow
+
 - `src/main.rs` - Tokio async runtime, CLI parsing, command routing
 - `src/cli/args.rs` - Clap argument definitions, Commands enum
 
 ### Core Modules
-- `src/api/` - HTTP client (`client.rs`) with direct file upload, request/response types
-- `src/commands/` - Command implementations (process, task/*, models, config, completion)
+
+- `src/api/` - HTTP client (`client.rs`) for AudioShake Tasks API, request/response types
+- `src/commands/` - Command implementations (process, task/\*, models, config, completion)
 - `src/config/` - Configuration loading from env, .env, TOML file
+- `src/storage/` - Cloud storage integration (R2/S3) for local file uploads
 - `src/download/` - Result file download orchestration
 - `src/error.rs` - Structured error types with thiserror
 
 ### Key Design Patterns
+
 - Async-first using Tokio
 - API key handling via `secrecy` crate (prevents accidental logging)
 - Configuration priority: CLI flag > env var > .env > config file
 - Error chain: `AppError` wraps `ConfigError`, `ApiError`, etc.
 
 ### Dependencies to Know
+
 - `clap` for CLI parsing
-- `reqwest` for HTTP client (including multipart file uploads)
+- `reqwest` for HTTP client
+- `aws-sdk-s3` for S3-compatible storage (Cloudflare R2)
 - `tracing` for logging
 - `wiremock` + `assert_cmd` for testing
+
+### Architecture Decision Records
+
+- [ADR-001](docs/adr/001-local-file-upload-strategy.md) - Legacy upload approach (deprecated)
+- [ADR-002](docs/adr/002-cloud-storage-upload-strategy.md) - Cloud storage upload strategy (current)
 
 ## Release Process
 

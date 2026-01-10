@@ -14,7 +14,9 @@ mod commands;
 mod config;
 mod download;
 mod error;
+mod media;
 mod output;
+mod storage;
 
 use cli::args::{Cli, Commands};
 use error::Result;

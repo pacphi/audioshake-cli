@@ -2,7 +2,9 @@
 
 ## Status
 
-**Accepted** - January 2026
+**Superseded** by [ADR-002](./002-cloud-storage-upload-strategy.md) - January 2026
+
+_Originally Accepted - January 2026_
 
 ## Context
 
@@ -26,7 +28,7 @@ The cloudflared tunnel approach proved unreliable in production. Multiple issues
 
 ### Issue 1: Race Condition on Tunnel URL Detection
 
-Cloudflared logs the tunnel URL to stderr *before* the tunnel is fully established:
+Cloudflared logs the tunnel URL to stderr _before_ the tunnel is fully established:
 
 ```
 INF Your quick Tunnel has been created! Visit it at (it may take some time to be reachable):
@@ -70,7 +72,7 @@ The tunnel was registered with Cloudflare's edge, but the local machine couldn't
 Even after all fixes, the AudioShake API consistently returned:
 
 ```json
-{"statusCode":400,"error":"Bad Request","message":"Error fetching or processing asset"}
+{ "statusCode": 400, "error": "Bad Request", "message": "Error fetching or processing asset" }
 ```
 
 This indicated that even when the tunnel appeared registered, AudioShake's servers couldn't reliably fetch files from the quick tunnel.
@@ -92,6 +94,7 @@ Replace the cloudflared tunnel approach with **direct file upload** to AudioShak
 ### Implementation Details
 
 **API Client Addition** (`src/api/client.rs`):
+
 ```rust
 pub async fn upload_file(&self, path: &Path) -> Result<UploadResponse> {
     // Read file, determine MIME type
@@ -102,6 +105,7 @@ pub async fn upload_file(&self, path: &Path) -> Result<UploadResponse> {
 ```
 
 **Process Command Change** (`src/commands/process.rs`):
+
 ```rust
 // Before: Start tunnel, get tunnel URL, submit to API
 // After: Upload file, get hosted URL, submit to API

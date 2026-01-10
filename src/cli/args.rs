@@ -93,7 +93,11 @@ pub struct ProcessArgs {
     #[arg(short, long = "format", default_values = ["wav"])]
     pub formats: Vec<AudioFormat>,
 
-    /// Use high-quality variant (1.5 credits/min)
+    /// Model variant (e.g., `two_speaker`, `n_speaker` for `multi_voice`; hq for vocals/instrumental)
+    #[arg(long)]
+    pub variant: Option<String>,
+
+    /// Use high-quality variant (1.5 credits/min) - shorthand for --variant hq
     #[arg(long)]
     pub hq: bool,
 
@@ -128,6 +132,10 @@ pub struct ProcessArgs {
     /// With --wait, don't download results automatically
     #[arg(long)]
     pub no_download: bool,
+
+    /// Estimate cost without submitting (requires ffprobe)
+    #[arg(long)]
+    pub dry_run: bool,
 }
 
 /// Available processing models
@@ -149,9 +157,9 @@ pub enum Model {
     MusicDetection,
     Background,
     MusicRemoval,
-    // Multi-voice
-    TwoSpeaker,
-    NSpeaker,
+    // Multi-voice speaker separation (enterprise feature, requires account enablement)
+    // See: https://www.audioshake.ai/products/multi-speaker-separation
+    MultiVoice,
     // Transcription
     Transcription,
     Alignment,
@@ -176,8 +184,7 @@ impl Model {
             Self::MusicDetection => "music_detection",
             Self::Background => "background",
             Self::MusicRemoval => "music_removal",
-            Self::TwoSpeaker => "two_speaker",
-            Self::NSpeaker => "n_speaker",
+            Self::MultiVoice => "multi_voice",
             Self::Transcription => "transcription",
             Self::Alignment => "alignment",
         }
@@ -189,10 +196,32 @@ impl Model {
         matches!(self, Self::Vocals | Self::Instrumental)
     }
 
-    /// Get credits per minute
+    /// Check if model supports variants
     #[must_use]
-    #[allow(dead_code)]
-    pub const fn credits_per_minute(self) -> f64 {
+    #[allow(dead_code)] // Reserved for validation
+    pub const fn supports_variant(self) -> bool {
+        matches!(self, Self::Vocals | Self::Instrumental | Self::MultiVoice)
+    }
+
+    /// Get available variants for this model
+    #[must_use]
+    #[allow(dead_code)] // Reserved for validation
+    pub const fn available_variants(self) -> &'static [&'static str] {
+        match self {
+            Self::Vocals | Self::Instrumental => &["hq"],
+            Self::MultiVoice => &["two_speaker", "n_speaker"],
+            _ => &[],
+        }
+    }
+
+    /// Get credits per minute for this model
+    ///
+    /// Pass `is_hq` to indicate if using the high-quality variant
+    #[must_use]
+    pub const fn credits_per_minute(self, is_hq: bool) -> f64 {
+        if is_hq && self.supports_hq() {
+            return 1.5;
+        }
         match self {
             Self::Dialogue | Self::Effects | Self::Background => 1.5,
             Self::MusicDetection => 0.5,
@@ -327,7 +356,11 @@ pub struct ModelsArgs {
 #[derive(Subcommand, Debug)]
 pub enum ConfigCommands {
     /// Display current configuration
-    Show,
+    Show {
+        /// Show sensitive values (API keys, secrets) unmasked
+        #[arg(long)]
+        show_sensitive: bool,
+    },
 
     /// Set a configuration value
     Set {

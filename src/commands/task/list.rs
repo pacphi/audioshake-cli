@@ -31,8 +31,8 @@ pub async fn execute(
     for task in response.tasks {
         let target_count = task.targets.len();
         table.add_row(vec![
-            task.id,
-            task.status.to_string(),
+            task.id.clone(),
+            task.effective_status().to_string(),
             task.created_at.format("%Y-%m-%d %H:%M").to_string(),
             format!("{target_count}"),
         ]);

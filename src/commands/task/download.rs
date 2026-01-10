@@ -20,10 +20,10 @@ pub async fn execute(
 
     let task = client.get_task(task_id).await?;
 
-    if task.status != TaskStatus::Completed {
+    if task.effective_status() != TaskStatus::Completed {
         return Err(crate::error::AppError::User(format!(
             "Task is not completed. Current status: {}",
-            task.status
+            task.effective_status()
         )));
     }
 

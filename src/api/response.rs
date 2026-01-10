@@ -10,21 +10,69 @@ use url::Url;
 pub struct Task {
     /// Task ID
     pub id: String,
-    /// Current status
-    pub status: TaskStatus,
+    /// Current status (may be at task level or derived from targets)
+    #[serde(default)]
+    pub status: Option<TaskStatus>,
     /// Creation timestamp
     pub created_at: DateTime<Utc>,
+    /// Update timestamp
+    #[serde(default)]
+    pub updated_at: Option<DateTime<Utc>>,
     /// Completion timestamp
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub completed_at: Option<DateTime<Utc>>,
+    /// Client ID
+    #[serde(default)]
+    pub client_id: Option<String>,
     /// Processing targets
     pub targets: Vec<TaskTargetResult>,
     /// Error information if failed
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub error: Option<TaskError>,
     /// Cost information
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub cost: Option<TaskCost>,
+}
+
+impl Task {
+    /// Get the effective status of the task
+    ///
+    /// Returns the task-level status if present, otherwise derives from targets
+    #[must_use]
+    pub fn effective_status(&self) -> TaskStatus {
+        // If task has explicit status, use it
+        if let Some(status) = self.status {
+            return status;
+        }
+
+        // Derive from targets
+        if self.targets.is_empty() {
+            return TaskStatus::Pending;
+        }
+
+        let mut has_failed = false;
+        let mut has_processing = false;
+        let mut all_completed = true;
+
+        for target in &self.targets {
+            match target.status {
+                Some(TaskStatus::Failed) => has_failed = true,
+                Some(TaskStatus::Processing) => has_processing = true,
+                Some(TaskStatus::Completed) => {}
+                Some(TaskStatus::Pending) | None => all_completed = false,
+            }
+        }
+
+        if has_failed {
+            TaskStatus::Failed
+        } else if all_completed {
+            TaskStatus::Completed
+        } else if has_processing {
+            TaskStatus::Processing
+        } else {
+            TaskStatus::Pending
+        }
+    }
 }
 
 /// Task status
@@ -70,29 +118,37 @@ impl std::fmt::Display for TaskStatus {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TaskTargetResult {
+    /// Target ID
+    #[serde(default)]
+    pub id: Option<String>,
     /// Model name
     pub model: String,
     /// Target status
     #[serde(default)]
     pub status: Option<TaskStatus>,
-    /// Output links
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub output: Option<TaskOutput>,
+    /// Output links (can be empty array or array of `OutputLink`)
+    #[serde(default)]
+    pub output: Vec<OutputLink>,
     /// Error message
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub error: Option<String>,
-}
-
-/// Output files for a target
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct TaskOutput {
-    /// Download links
-    pub links: Vec<OutputLink>,
+    /// Cost in credits
+    #[serde(default)]
+    pub cost: Option<f64>,
+    /// Duration in seconds
+    #[serde(default)]
+    pub duration: Option<f64>,
+    /// Output formats requested
+    #[serde(default)]
+    pub formats: Vec<String>,
 }
 
 /// A downloadable output file
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct OutputLink {
+    /// Output name (e.g., "vocals", "speaker\_1", "speaker\_2")
+    #[serde(default)]
+    pub name: Option<String>,
     /// File format
     pub format: String,
     /// Download URL

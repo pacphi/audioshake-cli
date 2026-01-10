@@ -13,6 +13,7 @@ struct ModelInfo {
     category: &'static str,
     credits_per_min: f64,
     supports_hq: bool,
+    variants: &'static [&'static str],
 }
 
 const MODELS: &[ModelInfo] = &[
@@ -23,6 +24,7 @@ const MODELS: &[ModelInfo] = &[
         category: "stems",
         credits_per_min: 1.0,
         supports_hq: true,
+        variants: &["hq"],
     },
     ModelInfo {
         name: "instrumental",
@@ -30,6 +32,7 @@ const MODELS: &[ModelInfo] = &[
         category: "stems",
         credits_per_min: 1.0,
         supports_hq: true,
+        variants: &["hq"],
     },
     ModelInfo {
         name: "drums",
@@ -37,6 +40,7 @@ const MODELS: &[ModelInfo] = &[
         category: "stems",
         credits_per_min: 1.0,
         supports_hq: false,
+        variants: &[],
     },
     ModelInfo {
         name: "bass",
@@ -44,6 +48,7 @@ const MODELS: &[ModelInfo] = &[
         category: "stems",
         credits_per_min: 1.0,
         supports_hq: false,
+        variants: &[],
     },
     ModelInfo {
         name: "guitar",
@@ -51,6 +56,7 @@ const MODELS: &[ModelInfo] = &[
         category: "stems",
         credits_per_min: 1.0,
         supports_hq: false,
+        variants: &[],
     },
     ModelInfo {
         name: "piano",
@@ -58,6 +64,7 @@ const MODELS: &[ModelInfo] = &[
         category: "stems",
         credits_per_min: 1.0,
         supports_hq: false,
+        variants: &[],
     },
     ModelInfo {
         name: "strings",
@@ -65,6 +72,7 @@ const MODELS: &[ModelInfo] = &[
         category: "stems",
         credits_per_min: 1.0,
         supports_hq: false,
+        variants: &[],
     },
     ModelInfo {
         name: "wind",
@@ -72,6 +80,7 @@ const MODELS: &[ModelInfo] = &[
         category: "stems",
         credits_per_min: 1.0,
         supports_hq: false,
+        variants: &[],
     },
     ModelInfo {
         name: "other",
@@ -79,6 +88,7 @@ const MODELS: &[ModelInfo] = &[
         category: "stems",
         credits_per_min: 1.0,
         supports_hq: false,
+        variants: &[],
     },
     // DMX
     ModelInfo {
@@ -87,6 +97,7 @@ const MODELS: &[ModelInfo] = &[
         category: "dmx",
         credits_per_min: 1.5,
         supports_hq: false,
+        variants: &[],
     },
     ModelInfo {
         name: "effects",
@@ -94,6 +105,7 @@ const MODELS: &[ModelInfo] = &[
         category: "dmx",
         credits_per_min: 1.5,
         supports_hq: false,
+        variants: &[],
     },
     ModelInfo {
         name: "music_detection",
@@ -101,6 +113,7 @@ const MODELS: &[ModelInfo] = &[
         category: "dmx",
         credits_per_min: 0.5,
         supports_hq: false,
+        variants: &[],
     },
     ModelInfo {
         name: "background",
@@ -108,6 +121,16 @@ const MODELS: &[ModelInfo] = &[
         category: "dmx",
         credits_per_min: 1.5,
         supports_hq: false,
+        variants: &[],
+    },
+    // Multi-voice speaker separation (enterprise feature)
+    ModelInfo {
+        name: "multi_voice",
+        description: "Separate individual speakers (enterprise)",
+        category: "speaker",
+        credits_per_min: 1.0,
+        supports_hq: false,
+        variants: &["two_speaker", "n_speaker"],
     },
     // Transcription
     ModelInfo {
@@ -116,6 +139,7 @@ const MODELS: &[ModelInfo] = &[
         category: "transcription",
         credits_per_min: 1.0,
         supports_hq: false,
+        variants: &[],
     },
     ModelInfo {
         name: "alignment",
@@ -123,6 +147,7 @@ const MODELS: &[ModelInfo] = &[
         category: "transcription",
         credits_per_min: 1.0,
         supports_hq: false,
+        variants: &[],
     },
 ];
 
@@ -163,6 +188,7 @@ fn print_simple_list(models: &[&ModelInfo]) {
             let title = match model.category {
                 "stems" => "Stem Separation Models",
                 "dmx" => "Dialogue/Music/Effects Models",
+                "speaker" => "Speaker Separation Models",
                 "transcription" => "Transcription Models",
                 _ => model.category,
             };
@@ -171,16 +197,19 @@ fn print_simple_list(models: &[&ModelInfo]) {
             current_category = model.category;
         }
 
-        let hq = if model.supports_hq {
-            " (HQ available)"
+        let suffix = if model.supports_hq {
+            " (HQ available)".to_string()
+        } else if !model.variants.is_empty() {
+            format!(" (variants: {})", model.variants.join(", "))
         } else {
-            ""
+            String::new()
         };
+
         println!(
             "  {:<16} {}{}",
             console::style(model.name).cyan(),
             model.description,
-            console::style(hq).dim()
+            console::style(&suffix).dim()
         );
     }
 }
@@ -193,16 +222,22 @@ fn print_detailed_table(models: &[&ModelInfo]) {
         "Description",
         "Category",
         "Credits/Min",
-        "HQ",
+        "Variants",
     ]);
 
     for model in models {
+        let variants = if model.variants.is_empty() {
+            "-".to_string()
+        } else {
+            model.variants.join(", ")
+        };
+
         table.add_row(vec![
             model.name.to_string(),
             model.description.to_string(),
             model.category.to_string(),
             format!("{:.1}", model.credits_per_min),
-            if model.supports_hq { "Yes" } else { "-" }.to_string(),
+            variants,
         ]);
     }
 

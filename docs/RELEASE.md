@@ -100,12 +100,12 @@ on:
 
 Each release includes pre-compiled binaries for:
 
-| Platform | Architecture | Artifact |
-|----------|--------------|----------|
-| Linux | x86_64 | `audioshake-{version}-linux-amd64.tar.gz` |
-| macOS | Intel | `audioshake-{version}-darwin-amd64.tar.gz` |
-| macOS | Apple Silicon | `audioshake-{version}-darwin-arm64.tar.gz` |
-| Windows | x86_64 | `audioshake-{version}-windows-amd64.zip` |
+| Platform | Architecture  | Artifact                                   |
+| -------- | ------------- | ------------------------------------------ |
+| Linux    | x86_64        | `audioshake-{version}-linux-amd64.tar.gz`  |
+| macOS    | Intel         | `audioshake-{version}-darwin-amd64.tar.gz` |
+| macOS    | Apple Silicon | `audioshake-{version}-darwin-arm64.tar.gz` |
+| Windows  | x86_64        | `audioshake-{version}-windows-amd64.zip`   |
 
 ### crates.io Publishing
 
@@ -163,11 +163,13 @@ Pre-release tags (containing `-`) are automatically marked as pre-release in Git
 After a release, users can install via:
 
 **Via Cargo (if published to crates.io):**
+
 ```bash
 cargo install audioshake-cli
 ```
 
 **Via Binary Download:**
+
 ```bash
 # macOS (Apple Silicon)
 curl -LO https://github.com/pacphi/audioshake-cli/releases/latest/download/audioshake-{version}-darwin-arm64.tar.gz

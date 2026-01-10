@@ -88,7 +88,7 @@ Current solutions require web interfaces or complex API integrations. There is n
 ```text
 1. User has local MP3 file: song.mp3
 2. User runs: `audioshake process song.mp3 -m vocals --wait`
-3. CLI uploads file to AudioShake servers and submits task
+3. CLI uploads file to user's R2 bucket, gets public URL, and submits task
 4. CLI displays progress spinner while processing
 5. CLI downloads vocals.wav to ./output/ directory
 6. User has isolated vocal track ready for use
@@ -217,9 +217,9 @@ done
 **Flow**:
 
 1. CLI validates input file exists and format is supported
-2. CLI uploads file to AudioShake servers (multipart upload)
-3. CLI receives hosted URL for uploaded file
-4. CLI submits task to AudioShake API with hosted URL
+2. CLI uploads file to configured cloud storage (Cloudflare R2)
+3. CLI generates public URL for the uploaded file
+4. CLI submits task to AudioShake API with public URL
 5. CLI polls for completion or uses webhook
 6. CLI downloads results to output directory
 
@@ -290,10 +290,11 @@ done
 
 ### FR-03: Local File Upload
 
-- Upload local files directly to AudioShake servers via multipart form
-- Support large files with appropriate timeout (10 minutes)
+- Upload local files to user-configured cloud storage (Cloudflare R2)
+- Support large files with streaming upload
 - Display upload progress indicator
-- Receive hosted URL for use with Tasks API
+- Generate public URL for use with Tasks API
+- Require one-time storage configuration (bucket, credentials)
 
 ### FR-04: Task Submission
 
@@ -360,7 +361,8 @@ done
 
 - API keys stored securely (not in command history)
 - HTTPS only for all API communication
-- Files uploaded directly to AudioShake (no third-party intermediaries)
+- Files uploaded to user-controlled cloud storage (Cloudflare R2)
+- Credentials masked by default in `config show` output
 
 ### NFR-04: Portability
 

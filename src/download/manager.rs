@@ -13,6 +13,8 @@ use url::Url;
 use crate::api::response::Task;
 use crate::error::{DownloadError, Result};
 
+const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
+
 /// Download manager for task outputs
 pub struct DownloadManager {
     client: Client,
@@ -25,8 +27,13 @@ impl DownloadManager {
     /// Create a new download manager
     #[must_use]
     pub fn new(output_dir: PathBuf, overwrite: bool) -> Self {
+        let client = Client::builder()
+            .user_agent(USER_AGENT)
+            .build()
+            .unwrap_or_else(|_| Client::new());
+
         Self {
-            client: Client::new(),
+            client,
             output_dir,
             overwrite,
             progress: MultiProgress::new(),
@@ -45,17 +52,17 @@ impl DownloadManager {
         let mut downloaded = Vec::new();
 
         for target in &task.targets {
-            if let Some(output) = &target.output {
-                for link in &output.links {
-                    let path = self.output_path(&target.model, &link.format);
+            for link in &target.output {
+                // Use the output name if available, otherwise fall back to model name
+                let name = link.name.as_deref().unwrap_or(&target.model);
+                let path = self.output_path(name, &link.format);
 
-                    if path.exists() && !self.overwrite {
-                        return Err(DownloadError::FileExists { path }.into());
-                    }
-
-                    self.download_file(&link.link, &path, link.size).await?;
-                    downloaded.push(path);
+                if path.exists() && !self.overwrite {
+                    return Err(DownloadError::FileExists { path }.into());
                 }
+
+                self.download_file(&link.link, &path, link.size).await?;
+                downloaded.push(path);
             }
         }
 

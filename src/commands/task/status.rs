@@ -12,13 +12,14 @@ pub async fn execute(task_id: &str, config: &AppConfig) -> Result<()> {
     let task = client.get_task(task_id).await?;
 
     println!("Task: {}", console::style(&task.id).cyan());
+    let status = task.effective_status();
     println!(
         "Status: {}",
-        match task.status {
-            TaskStatus::Completed => console::style(task.status.as_str()).green(),
-            TaskStatus::Failed => console::style(task.status.as_str()).red(),
-            TaskStatus::Processing => console::style(task.status.as_str()).yellow(),
-            TaskStatus::Pending => console::style(task.status.as_str()).dim(),
+        match status {
+            TaskStatus::Completed => console::style(status.as_str()).green(),
+            TaskStatus::Failed => console::style(status.as_str()).red(),
+            TaskStatus::Processing => console::style(status.as_str()).yellow(),
+            TaskStatus::Pending => console::style(status.as_str()).dim(),
         }
     );
     println!(
@@ -51,14 +52,13 @@ pub async fn execute(task_id: &str, config: &AppConfig) -> Result<()> {
 
         print!("  {} {}", status_icon, target.model);
 
-        if let Some(output) = &target.output {
-            for link in &output.links {
-                if let Some(size) = link.size {
-                    let size_str = humansize::format_size(size, humansize::BINARY);
-                    print!(" → {} ({})", link.format, size_str);
-                } else {
-                    print!(" → {}", link.format);
-                }
+        for link in &target.output {
+            let name = link.name.as_deref().unwrap_or(&link.format);
+            if let Some(size) = link.size {
+                let size_str = humansize::format_size(size, humansize::BINARY);
+                print!(" → {}.{} ({})", name, link.format, size_str);
+            } else {
+                print!(" → {}.{}", name, link.format);
             }
         }
 

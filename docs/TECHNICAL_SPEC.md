@@ -29,10 +29,10 @@ The AudioShake CLI is built using a modular architecture with clear separation o
           │             │             │             │
 ┌─────────▼─────────────▼─────────────▼─────────────▼─────────────┐
 │                         Core Services                           │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐                 │
-│  │ api/client │  │  config/   │  │  download/ │                 │
-│  │ (+ upload) │  │  loader    │  │  manager   │                 │
-│  └────────────┘  └────────────┘  └────────────┘                 │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐ │
+│  │ api/client │  │  config/   │  │  storage/  │  │  download/ │ │
+│  │            │  │  loader    │  │  r2        │  │  manager   │ │
+│  └────────────┘  └────────────┘  └────────────┘  └────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -78,10 +78,14 @@ audioshake-cli/
 │   │
 │   ├── api/                   # API client
 │   │   ├── mod.rs
-│   │   ├── client.rs          # HTTP client with upload support
+│   │   ├── client.rs          # HTTP client for Tasks API
 │   │   ├── request.rs         # Request types
-│   │   ├── response.rs        # Response types (incl. UploadResponse)
-│   │   └── error.rs           # API errors
+│   │   └── response.rs        # Response types
+│   │
+│   ├── storage/               # Cloud storage for local files
+│   │   ├── mod.rs             # StorageProvider trait
+│   │   ├── config.rs          # Storage configuration types
+│   │   └── r2.rs              # Cloudflare R2 implementation
 │   │
 │   ├── config/                # Configuration
 │   │   ├── mod.rs
@@ -160,9 +164,10 @@ reqwest = { version = "0.12", default-features = false, features = [
     "gzip"
 ] }
 
-# HTTP Server (for local file serving)
-axum = "0.8"
-tower = "0.5"
+# Cloud Storage (S3-compatible)
+aws-config = { version = "1.6", features = ["behavior-version-latest"] }
+aws-sdk-s3 = "1.82"
+aws-credential-types = "1.2"
 tower-http = { version = "0.6", features = ["fs", "cors"] }
 
 # Serialization
@@ -690,79 +695,106 @@ impl ApiClient {
 
 ---
 
-## File Upload
+## Cloud Storage Upload
 
-Local files are uploaded directly to AudioShake's servers using the legacy API endpoint.
-See [ADR-001](adr/001-local-file-upload-strategy.md) for the decision rationale.
+Local files are uploaded to user-configured cloud storage (Cloudflare R2) before processing.
+The AudioShake Tasks API requires publicly accessible URLs, so files must be hosted externally.
+See [ADR-002](adr/002-cloud-storage-upload-strategy.md) for the decision rationale.
 
-### Upload Implementation (src/api/client.rs)
+### Storage Module (src/storage/)
 
 ```rust
-const LEGACY_UPLOAD_URL: &str = "https://groovy.audioshake.ai/upload";
+// src/storage/mod.rs
+/// Trait for cloud storage providers
+#[async_trait]
+pub trait StorageProvider: Send + Sync {
+    /// Upload a file and return its public URL
+    async fn upload(&self, path: &Path) -> Result<Url>;
 
-impl ApiClient {
-    /// Upload a local file to AudioShake's servers
-    pub async fn upload_file(&self, path: &Path) -> Result<UploadResponse> {
-        // Read file contents
-        let mut file = File::open(path).await?;
-        let mut contents = Vec::new();
-        file.read_to_end(&mut contents).await?;
+    /// Delete an object by key
+    async fn delete(&self, key: &str) -> Result<()>;
 
-        let file_name = path.file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("file")
-            .to_string();
+    /// Get the provider name for display purposes
+    fn provider_name(&self) -> &'static str;
+}
+```
 
-        // Determine MIME type from extension
-        let mime_type = match path.extension().and_then(|e| e.to_str()) {
-            Some("mp3") => "audio/mpeg",
-            Some("wav") => "audio/wav",
-            Some("mp4") => "video/mp4",
-            // ... other formats
-            _ => "application/octet-stream",
-        };
+### R2 Implementation (src/storage/r2.rs)
 
-        // Create multipart form
-        let part = Part::bytes(contents)
-            .file_name(file_name)
-            .mime_str(mime_type)?;
-        let form = Form::new().part("file", part);
+```rust
+use aws_sdk_s3::Client;
 
-        // Use longer timeout for large files
-        let upload_client = Client::builder()
-            .timeout(Duration::from_secs(600))
-            .build()?;
+pub struct R2Storage {
+    client: Client,
+    bucket: String,
+    public_url_base: Url,
+}
 
-        let response = upload_client
-            .post(LEGACY_UPLOAD_URL)
-            .header("Authorization", format!("Bearer {}", self.api_key.expose_secret()))
-            .multipart(form)
+impl R2Storage {
+    pub fn new(config: &StorageConfig) -> Result<Self> {
+        let credentials = Credentials::new(
+            &r2_config.access_key_id,
+            r2_config.secret_access_key.expose_secret(),
+            None, None, "r2-storage",
+        );
+
+        let s3_config = aws_sdk_s3::Config::builder()
+            .behavior_version(BehaviorVersion::latest())
+            .region(Region::new("auto"))
+            .endpoint_url(r2_config.endpoint_url())
+            .credentials_provider(credentials)
+            .force_path_style(true)
+            .build();
+
+        let client = Client::from_conf(s3_config);
+        // ...
+    }
+}
+
+#[async_trait]
+impl StorageProvider for R2Storage {
+    async fn upload(&self, path: &Path) -> Result<Url> {
+        let key = Self::generate_key(path);
+        let body = ByteStream::from_path(path).await?;
+
+        self.client
+            .put_object()
+            .bucket(&self.bucket)
+            .key(&key)
+            .body(body)
+            .content_type(Self::mime_type(path))
             .send()
             .await?;
 
-        self.handle_response(response).await
+        self.public_url(&key)
     }
 }
 ```
 
-### Upload Response Type (src/api/response.rs)
+### Configuration
 
-```rust
-/// Response from file upload (legacy API)
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct UploadResponse {
-    /// Uploaded file name
-    pub name: String,
-    /// Asset ID for job requests
-    pub id: String,
-    /// MIME type
-    pub file_type: String,
-    /// File extension
-    pub format: String,
-    /// Download URL for the uploaded file
-    pub link: Url,
-}
+Storage configuration is loaded from environment variables or config file:
+
+```bash
+# Environment variables
+AUDIOSHAKE_STORAGE_PROVIDER=r2
+AUDIOSHAKE_STORAGE_BUCKET=my-bucket
+AUDIOSHAKE_STORAGE_PUBLIC_URL_BASE=https://my-bucket.r2.dev
+AUDIOSHAKE_R2_ACCOUNT_ID=abc123
+AUDIOSHAKE_R2_ACCESS_KEY_ID=xxx
+AUDIOSHAKE_R2_SECRET_ACCESS_KEY=xxx
+```
+
+```toml
+# ~/.config/audioshake/config.toml
+[storage]
+provider = "r2"
+bucket = "my-bucket"
+public_url_base = "https://my-bucket.r2.dev"
+
+[storage.r2]
+account_id = "abc123"
+access_key_id = "xxx"
 ```
 
 ---
@@ -1027,8 +1059,9 @@ fn test_missing_api_key() {
 
 1. **API Key Protection**: Uses secrecy crate, never logged or displayed
 2. **HTTPS Only**: All API communication uses TLS
-3. **Direct Upload**: Files uploaded directly to AudioShake (no third-party intermediaries)
+3. **Cloud Storage Upload**: Files uploaded to user-controlled R2 bucket (zero egress fees)
 4. **No Shell Injection**: All subprocess commands use array args
+5. **Credential Masking**: `config show` masks sensitive values by default (use `--show-sensitive` to reveal)
 
 ---
 

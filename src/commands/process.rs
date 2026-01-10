@@ -12,7 +12,11 @@ use crate::api::response::TaskStatus;
 use crate::cli::args::ProcessArgs;
 use crate::config::types::AppConfig;
 use crate::download::manager::DownloadManager;
-use crate::error::Result;
+use crate::error::{Result, StorageError};
+use crate::media;
+use crate::storage::config::StorageProviderType;
+use crate::storage::r2::R2Storage;
+use crate::storage::StorageProvider;
 
 /// Execute the process command
 ///
@@ -21,13 +25,18 @@ use crate::error::Result;
 /// Returns an error if processing fails.
 #[allow(clippy::missing_panics_doc)] // Template string is compile-time constant
 pub async fn execute(args: ProcessArgs, config: &AppConfig) -> Result<()> {
+    // Handle dry-run mode
+    if args.dry_run {
+        return execute_dry_run(&args);
+    }
+
     let client = ApiClient::new(config.base_url.clone(), config.api_key.clone())?;
 
     // Determine if input is a URL or local file
     let media_url = if args.input.starts_with("http://") || args.input.starts_with("https://") {
         Url::parse(&args.input)?
     } else {
-        // Local file - upload to AudioShake servers
+        // Local file - upload to cloud storage first
         let path = Path::new(&args.input);
         if !path.exists() {
             return Err(crate::error::AppError::User(format!(
@@ -36,41 +45,146 @@ pub async fn execute(args: ProcessArgs, config: &AppConfig) -> Result<()> {
             )));
         }
 
-        // Get file size for progress display
-        let metadata = std::fs::metadata(path)?;
-        let size_str = humansize::format_size(metadata.len(), humansize::BINARY);
-
-        println!(
-            "{} {} ({})",
-            console::style("Uploading").dim(),
-            console::style(path.file_name().unwrap_or_default().to_string_lossy()).cyan(),
-            size_str
-        );
-
-        let spinner = ProgressBar::new_spinner();
-        spinner.set_style(
-            ProgressStyle::default_spinner()
-                .template("{spinner:.cyan} {msg}")
-                .unwrap()
-                .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"),
-        );
-        spinner.enable_steady_tick(Duration::from_millis(100));
-        spinner.set_message("Uploading to AudioShake...");
-
-        let upload_result = client.upload_file(path).await?;
-
-        spinner.finish_and_clear();
-
-        println!(
-            "{} {}",
-            console::style("✓").green().bold(),
-            console::style("Upload complete").green()
-        );
-
-        upload_result.link
+        upload_local_file(path, config).await?
     };
 
     process_with_url(&client, &args, config, media_url).await
+}
+
+/// Execute dry-run mode: estimate cost without submitting
+fn execute_dry_run(args: &ProcessArgs) -> Result<()> {
+    // Check if input is a URL (can't estimate without file)
+    if args.input.starts_with("http://") || args.input.starts_with("https://") {
+        return Err(crate::error::AppError::User(
+            "Cannot estimate cost for URLs. --dry-run only works with local files.".to_string(),
+        ));
+    }
+
+    let path = Path::new(&args.input);
+    if !path.exists() {
+        return Err(crate::error::AppError::User(format!(
+            "File not found: {}",
+            args.input
+        )));
+    }
+
+    // Get file duration
+    println!(
+        "{} {}",
+        console::style("Analyzing").dim(),
+        console::style(path.file_name().unwrap_or_default().to_string_lossy()).cyan()
+    );
+
+    let duration_secs = media::get_duration(path)?;
+    let duration_mins = duration_secs / 60.0;
+
+    println!(
+        "{} {}",
+        console::style("Duration:").dim(),
+        console::style(media::format_duration(duration_secs)).cyan()
+    );
+
+    // Calculate cost for each model
+    println!();
+    println!("{}", console::style("Cost Estimate").bold());
+    println!("{}", "-".repeat(50));
+
+    let is_hq = args.hq
+        || args.variant.as_deref() == Some("hq")
+        || args.variant.as_deref() == Some("high_quality");
+    let mut total_credits = 0.0;
+
+    for model in &args.models {
+        let credits_per_min = model.credits_per_minute(is_hq);
+        let model_credits = duration_mins * credits_per_min;
+        total_credits += model_credits;
+
+        let model_display = match (&args.variant, is_hq && model.supports_hq()) {
+            (Some(v), false) if model.supports_variant() => {
+                format!("{} ({v})", model.api_name())
+            }
+            (_, true) => format!("{} (HQ)", model.api_name()),
+            _ => model.api_name().to_string(),
+        };
+
+        println!(
+            "  {model_display:<30} {model_credits:>6.1} credits  ({credits_per_min:.1} credits/min × {duration_mins:.1} min)"
+        );
+    }
+
+    println!("{}", "-".repeat(50));
+    println!(
+        "  {:<30} {:>6.1} credits",
+        console::style("TOTAL").bold(),
+        total_credits
+    );
+
+    println!();
+    println!(
+        "{}",
+        console::style("Run without --dry-run to submit the task.").dim()
+    );
+
+    Ok(())
+}
+
+/// Upload a local file to cloud storage and return the public URL
+async fn upload_local_file(path: &Path, config: &AppConfig) -> Result<Url> {
+    let storage_config = config.storage.as_ref().ok_or(StorageError::NotConfigured)?;
+
+    // Get file size for progress display
+    let metadata = std::fs::metadata(path)?;
+    let size_str = humansize::format_size(metadata.len(), humansize::BINARY);
+
+    let provider_name = match storage_config.provider {
+        StorageProviderType::R2 => "Cloudflare R2",
+        StorageProviderType::S3 => "AWS S3",
+        StorageProviderType::B2 => "Backblaze B2",
+        StorageProviderType::None => return Err(StorageError::NotConfigured.into()),
+    };
+
+    println!(
+        "{} {} ({}) to {}",
+        console::style("Uploading").dim(),
+        console::style(path.file_name().unwrap_or_default().to_string_lossy()).cyan(),
+        size_str,
+        provider_name
+    );
+
+    let spinner = ProgressBar::new_spinner();
+    spinner.set_style(
+        ProgressStyle::default_spinner()
+            .template("{spinner:.cyan} {msg}")
+            .unwrap()
+            .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"),
+    );
+    spinner.enable_steady_tick(Duration::from_millis(100));
+    spinner.set_message(format!("Uploading to {provider_name}..."));
+
+    let url = match storage_config.provider {
+        StorageProviderType::R2 => {
+            let storage = R2Storage::new(storage_config)?;
+            storage.upload(path).await?
+        }
+        StorageProviderType::S3 | StorageProviderType::B2 => {
+            return Err(crate::error::AppError::User(format!(
+                "Storage provider '{}' is not yet implemented. Use 'r2' for Cloudflare R2.",
+                storage_config.provider
+            )));
+        }
+        StorageProviderType::None => return Err(StorageError::NotConfigured.into()),
+    };
+
+    spinner.finish_and_clear();
+
+    println!(
+        "{} {} ({})",
+        console::style("✓").green().bold(),
+        console::style("Upload complete").green(),
+        console::style(url.as_str()).dim()
+    );
+
+    Ok(url)
 }
 
 async fn process_with_url(
@@ -96,7 +210,10 @@ async fn process_with_url(
     for model in &args.models {
         let mut target = TaskTarget::new(model.api_name(), formats.clone());
 
-        if args.hq && model.supports_hq() {
+        // Handle variant: explicit --variant takes precedence over --hq shorthand
+        if let Some(variant) = &args.variant {
+            target = target.with_variant(variant);
+        } else if args.hq && model.supports_hq() {
             target = target.with_hq();
         }
 
@@ -144,14 +261,14 @@ async fn process_with_url(
                 Duration::from_secs(args.poll_interval),
                 Duration::from_secs(args.timeout),
                 |t| {
-                    spinner.set_message(format!("Status: {}", t.status));
+                    spinner.set_message(format!("Status: {}", t.effective_status()));
                 },
             )
             .await?;
 
         spinner.finish_and_clear();
 
-        match task.status {
+        match task.effective_status() {
             TaskStatus::Completed => {
                 println!(
                     "{} Task completed successfully!",

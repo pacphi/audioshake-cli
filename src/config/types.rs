@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::cli::args::OutputFormat;
+use crate::storage::config::StorageConfig;
 
 /// Application configuration
 #[derive(Debug, Clone)]
@@ -28,6 +29,8 @@ pub struct AppConfig {
     pub verbose: u8,
     /// Quiet mode
     pub quiet: bool,
+    /// Storage configuration for local file uploads
+    pub storage: Option<StorageConfig>,
 }
 
 impl AppConfig {
@@ -73,4 +76,8 @@ pub struct ConfigFile {
     /// Default timeout
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default_timeout: Option<u64>,
+
+    /// Storage configuration
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub storage: Option<crate::storage::config::StorageConfigFile>,
 }

@@ -7,6 +7,7 @@
 .PHONY: test test-unit test-integration test-coverage
 .PHONY: lint lint-fix format format-check
 .PHONY: lint-md lint-md-fix format-md format-md-check lint-yaml check-links
+.PHONY: lint-all format-all format-all-check
 .PHONY: audit license-check
 .PHONY: outdated upgrade upgrade-latest
 .PHONY: doc doc-open
@@ -41,19 +42,24 @@ help:
 	@echo "  test-integration - Run integration tests (requires mock server)"
 	@echo "  test-coverage    - Run tests with coverage report"
 	@echo ""
-	@echo "Code Quality:"
+	@echo "Code Quality (Rust):"
 	@echo "  lint             - Run clippy linter"
 	@echo "  lint-fix         - Auto-fix lint issues"
 	@echo "  format           - Format code with rustfmt"
 	@echo "  format-check     - Check formatting without changes"
 	@echo ""
-	@echo "Markdown & YAML:"
+	@echo "Code Quality (Markdown):"
 	@echo "  lint-md          - Lint markdown files"
 	@echo "  lint-md-fix      - Auto-fix markdown lint issues"
 	@echo "  format-md        - Format markdown files with prettier"
 	@echo "  format-md-check  - Check markdown formatting"
 	@echo "  lint-yaml        - Lint YAML files (requires yamllint)"
 	@echo "  check-links      - Check links in markdown files (requires lychee)"
+	@echo ""
+	@echo "Code Quality (All):"
+	@echo "  lint-all         - Run all linters (clippy + markdown)"
+	@echo "  format-all       - Format all files (rustfmt + prettier)"
+	@echo "  format-all-check - Check all formatting"
 	@echo ""
 	@echo "Security & Dependencies:"
 	@echo "  audit            - Run security audit"
@@ -212,6 +218,19 @@ check-links:
 	lychee --verbose --no-progress --exclude-path node_modules --exclude-path .git --exclude-path target --exclude-path undefined --exclude 'https://api\.audioshake\.ai' '**/*.md'
 
 # =============================================================================
+# Combined Code Quality (Rust + Markdown)
+# =============================================================================
+
+lint-all: lint lint-md
+	@echo "==> All linting complete!"
+
+format-all: format format-md
+	@echo "==> All formatting complete!"
+
+format-all-check: format-check format-md-check
+	@echo "==> All format checks complete!"
+
+# =============================================================================
 # Security & Dependencies
 # =============================================================================
 
@@ -257,7 +276,7 @@ doc-open:
 # CI helpers (used by GitHub Actions)
 # =============================================================================
 
-ci: format-check lint test build-release
+ci: format-all-check lint-all test build-release
 	@echo "==> All CI checks passed!"
 
 # =============================================================================

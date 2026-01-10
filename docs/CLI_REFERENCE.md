@@ -407,20 +407,34 @@ audioshake config <SUBCOMMAND>
 Display current configuration.
 
 ```bash
-audioshake config show
+audioshake config show [OPTIONS]
 ```
+
+| Option             | Description                                     |
+| ------------------ | ----------------------------------------------- |
+| `--show-sensitive` | Show sensitive values (API keys, etc.) unmasked |
 
 **Output Example:**
 
 ```text
 Configuration
--------------
-API Key:       ashke_****cc4e (from .env)
+----------------------------------------
+API Key:       ashk****cc4e
 Base URL:      https://api.audioshake.ai
 Output Dir:    ./output
-Default Format: wav
 Poll Interval: 5s
 Timeout:       3600s
+
+Storage
+----------------------------------------
+Provider:      r2
+Bucket:        my-bucket
+Public URL:    https://my-bucket.r2.dev
+R2 Account:    abc1****xyz
+R2 Access Key: xyz7****abc
+R2 Secret:     (set via AUDIOSHAKE_R2_SECRET_ACCESS_KEY env var)
+
+Tip: Use --show-sensitive to reveal masked values
 ```
 
 ##### config set
@@ -431,7 +445,7 @@ Set a configuration value.
 audioshake config set <KEY> <VALUE>
 ```
 
-Available keys:
+**General Settings:**
 
 - `api-key` - API key
 - `base-url` - API base URL
@@ -440,10 +454,28 @@ Available keys:
 - `default-poll-interval` - Default polling interval
 - `default-timeout` - Default timeout
 
+**Storage Settings (for local file uploads):**
+
+- `storage.provider` - Storage provider (`r2`)
+- `storage.bucket` - Bucket name
+- `storage.public-url-base` - Public URL base
+- `storage.r2.account-id` - Cloudflare account ID
+- `storage.r2.access-key-id` - R2 access key ID
+
 ```bash
+# General settings
 audioshake config set default-output-dir ~/Music/stems
 audioshake config set default-format mp3
-audioshake config set default-poll-interval 10
+
+# Storage settings (required for local file processing)
+audioshake config set storage.provider r2
+audioshake config set storage.bucket my-audioshake-uploads
+audioshake config set storage.public-url-base https://my-audioshake-uploads.r2.dev
+audioshake config set storage.r2.account-id your_account_id
+audioshake config set storage.r2.access-key-id your_access_key
+
+# Secret should be set via environment variable
+export AUDIOSHAKE_R2_SECRET_ACCESS_KEY=your_secret_key
 ```
 
 ##### config init
