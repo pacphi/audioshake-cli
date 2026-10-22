@@ -2,7 +2,7 @@
 name = "audioshake-cli"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.92"
+rust-version = "1.99"
 authors = ["AudioShake CLI Contributors"]
 description = "Command-line interface for the AudioShake audio processing API"
 license = "MIT"
@@ -53,7 +53,6 @@ reqwest = { version = "0.13", default-features = false, features = [
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-serde_yaml = "0.9"
 toml = "0.9"
 
 # Environment & Configuration
@@ -85,7 +84,15 @@ secrecy = { version = "0.10", features = ["serde"] }
 
 # AWS SDK for S3-compatible storage (Cloudflare R2)
 aws-config = { version = "1.6", features = ["behavior-version-latest"] }
-aws-sdk-s3 = "1.82"
+# default-features = false drops the SDK's legacy `rustls` feature, which pulls in
+# hyper 0.14 / rustls 0.21 / h2 0.3 (RUSTSEC advisories, no patched releases on
+# those lines). `default-https-client` uses the current hyper 1 / rustls 0.23 stack.
+aws-sdk-s3 = { version = "1.82", default-features = false, features = [
+    "sigv4a",
+    "http-1x",
+    "default-https-client",
+    "rt-tokio",
+] }
 aws-credential-types = "1.2"
 aws-smithy-types = "1.3"
 
