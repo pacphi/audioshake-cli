@@ -311,7 +311,9 @@ endif
 	@# Update version in Cargo.toml
 	@echo "Updating version in Cargo.toml to $(V)..."
 	@sed -i.bak 's/^version = .*/version = "$(V)"/' Cargo.toml && rm Cargo.toml.bak
-	@git add Cargo.toml
+	@# Sync the committed Cargo.lock with the new package version (workspace only, no dependency updates)
+	@cargo update --workspace
+	@git add Cargo.toml Cargo.lock
 	@git commit -m "chore: bump version to $(V)"
 	@git tag -a "v$(V)" -m "Release v$(V)"
 	@git push origin HEAD
