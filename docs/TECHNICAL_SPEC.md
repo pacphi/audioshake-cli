@@ -139,7 +139,7 @@ license = "MIT"
 repository = "https://github.com/pacphi/audioshake-cli"
 keywords = ["audio", "stems", "separation", "transcription", "cli"]
 categories = ["command-line-utilities", "multimedia::audio"]
-rust-version = "1.92"
+rust-version = "1.99"
 
 [dependencies]
 # CLI Framework

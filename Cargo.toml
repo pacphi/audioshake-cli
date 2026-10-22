@@ -2,7 +2,7 @@
 name = "audioshake-cli"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.92"
+rust-version = "1.99"
 authors = ["AudioShake CLI Contributors"]
 description = "Command-line interface for the AudioShake audio processing API"
 license = "MIT"

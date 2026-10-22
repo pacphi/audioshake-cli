@@ -403,7 +403,7 @@ done
 
 ### Required
 
-- Rust 1.92+ (for async traits, 2024 edition features)
+- Rust 1.99+ (for async traits, 2024 edition features)
 - Internet connection (for API access)
 
 ### Optional

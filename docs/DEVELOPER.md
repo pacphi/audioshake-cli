@@ -4,7 +4,7 @@ This guide is for developers who want to contribute to the AudioShake CLI or bui
 
 ## Prerequisites
 
-- **Rust 1.92+**: Install via [rustup](https://rustup.rs/)
+- **Rust 1.99+**: Install via [rustup](https://rustup.rs/)
 - **Git**: For version control
 
 ## Getting Started
