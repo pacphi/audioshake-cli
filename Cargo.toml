@@ -88,7 +88,6 @@ aws-config = { version = "1.6", features = ["behavior-version-latest"] }
 # hyper 0.14 / rustls 0.21 / h2 0.3 (RUSTSEC advisories, no patched releases on
 # those lines). `default-https-client` uses the current hyper 1 / rustls 0.23 stack.
 aws-sdk-s3 = { version = "1.82", default-features = false, features = [
-    "sigv4a",
     "http-1x",
     "default-https-client",
     "rt-tokio",
